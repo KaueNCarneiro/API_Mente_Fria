@@ -1,7 +1,7 @@
 # PLAN.md — Implementação da Mente Fria API
 
 > **Status (2026-11-15):** Fases 1 e 2 executadas e verificadas (ver *Evidências da execução*). Fases 3 a 6 **não iniciadas** — todos os seus checkboxes permanecem desmarcados. Execução interrompida para **revisão humana**; a Fase 3 só começa com autorização explícita.
-> **Pendência de verificação:** a comparação Pydantic × `components.schemas` foi feita contra uma transcrição do contrato (o arquivo OpenAPI não está no repositório). **P2-64** e o 2º critério de aceite da Fase 2 ficam abertos até `python verify_schemas.py --openapi "Mente Fria API.openapi.json"` ser executado com o arquivo real.
+> **Verificação contra o contrato real:** `python verify_schemas.py --openapi "Mente Fria API.openapi.json"` executado em 2026-11-15 sobre o repositório publicado (commit `327c783`): 5 976 verificações, todas OK (inclui descrições e exemplos).
 
 ## Premissas e governança
 
@@ -114,7 +114,7 @@ Em `test`/`production` não há `.env`: forneça `MENTE_FRIA_ENV`, `MENTE_FRIA_D
 
 ## Fase 2 — Schemas Pydantic v2
 
-**Total de tarefas: 64** — **concluídas e verificadas: 63** (aberta: P2-64)
+**Total de tarefas: 64** — **concluídas e verificadas: 64**
 
 ### Checklist sequencial
 
@@ -256,14 +256,14 @@ Em `test`/`production` não há `.env`: forneça `MENTE_FRIA_ENV`, `MENTE_FRIA_D
 - [x] **P2-63** Planejar teste de round-trip/serialização para confirmar aliases e nomes JSON exatos.  
   - Dependências: P2-56; P2-62.  
   - Evidência: Round-trip JSON em todos os modelos; `Decimal` serializado como número JSON (não string); chaves exatas (verificado).
-- [ ] **P2-64** Planejar comparação automatizada entre os 54 schemas Pydantic e `components.schemas` para detectar divergências de contrato.  
+- [x] **P2-64** Planejar comparação automatizada entre os 54 schemas Pydantic e `components.schemas` para detectar divergências de contrato.  
   - Dependências: P2-01 a P2-63.  
-  - Evidência: **aberto:** o comparador existe (`--openapi`, com autoteste e detecção de divergência proposital), mas ainda não foi executado contra o arquivo OpenAPI real. Marcar após rodar `python verify_schemas.py --openapi "Mente Fria API.openapi.json"` com sucesso.
+  - Evidência: `python verify_schemas.py --openapi "Mente Fria API.openapi.json"` → 54 schemas, 5 976 verificações OK (tipos, limites, enums, nullability, required, `additionalProperties`, descrições e exemplos). O comparador também detecta divergência proposital (autoteste).
 
 ### Critérios de aceite
 
 - [x] Os 54 nomes de `components.schemas` estão cobertos sem schema omitido ou inventado.
-- [ ] Campos, required, tipos, formatos, enums, limites, exemplos, nullability e `additionalProperties` conferidos contra OpenAPI. *(conferido contra transcrição; falta a execução com o arquivo real — ver P2-64)*
+- [x] Campos, required, tipos, formatos, enums, limites, exemplos, nullability e `additionalProperties` conferidos contra OpenAPI. *(comparação direta com o arquivo real — ver P2-64)*
 - [x] Aliases preservam os nomes JSON; paginação usa `data`/`paginacao`; erros usam `ApiError`; CSV não é JSON. *(nomes preservados sem aliases — ver P2-56)*
 - [x] Testes de validação e serialização planejados para todos os schemas.
 
@@ -276,7 +276,7 @@ Em `test`/`production` não há `.env`: forneça `MENTE_FRIA_ENV`, `MENTE_FRIA_D
 5. **Opcionais não-nuláveis** (`UpdateUsuarioDTO.*`, `ProducaoRecomendacao.observacao`): `default=None` rejeitando `null` explícito; o JSON Schema do FastAPI mostrará `default: null`. Em services, usar `model_dump(exclude_unset=True)`.
 6. **Enums inline** representados por `Literal` (sem criar schemas fora dos 54).
 7. **`senha`** com `repr=False` (higiene de logs; não altera o contrato).
-8. **Descrições e exemplos** foram copiados do contrato manualmente; só serão comparados automaticamente na execução com `--openapi`.
+8. **Descrições e exemplos** copiados do contrato e conferidos automaticamente contra o arquivo real (P2-64).
 
 ## Fase 3 — Modelagem ORM e banco de dados
 
@@ -636,16 +636,16 @@ Ambiente: Python 3.12.3, venv novo a partir de `src/api/requirements.txt`.
 | Regras de configuração (segredo/expiração obrigatórios, produção, teste, CORS, `.env` só em local) | OK |
 | Redação de logs (senha, token, Bearer, hash) | OK |
 | `verify_schemas.py`: 54 schemas, required, limites, enums, nullability, `additionalProperties`, extras, round-trip, `Decimal` como número JSON | 4 824 verificações OK |
-| Comparação direta com o arquivo OpenAPI (`--openapi`) | **não executada** (arquivo fora do repositório) |
+| `verify_schemas.py --openapi "Mente Fria API.openapi.json"` (arquivo real, repositório publicado) | 5 976 verificações OK |
 
 ## Contagem de tarefas
 
 | Fase | Tarefas | Concluídas |
 |---|---:|---:|
 | Fase 1 | 17 | 17 |
-| Fase 2 | 64 | 63 |
+| Fase 2 | 64 | 64 |
 | Fase 3 | 22 | 0 |
 | Fase 4 | 18 | 0 |
 | Fase 5 | 68 | 0 |
 | Fase 6 | 26 | 0 |
-| **Total** | **215** | **80** |
+| **Total** | **215** | **81** |
