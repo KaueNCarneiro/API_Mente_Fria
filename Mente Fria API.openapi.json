@@ -1,0 +1,5915 @@
+{
+  "openapi": "3.0.1",
+  "info": {
+    "title": "Mente Fria API",
+    "description": "Contrato Design-First da API REST do Mente Fria, sistema de apoio à gestão de pequenos comércios, com piloto em uma açaiteria. Centraliza cadastro de usuários, clientes, ingredientes, produtos, composição, estoque e pedidos; oferece alertas, dashboard e cálculos de recomendação. A recomendação de produção utiliza Programação Linear Inteira e maximiza o lucro estimado. Este documento especifica o contrato desejado no padrão /api/v1 e não afirma que todas as rotas já estejam implementadas.",
+    "version": "1.0.0",
+    "contact": {
+      "name": "Equipe Mente Fria",
+      "url": "https://github.com/KaueNCarneiro/Mente_Fria"
+    }
+  },
+  "tags": [
+    {
+      "name": "Saúde"
+    },
+    {
+      "name": "Autenticação"
+    },
+    {
+      "name": "Usuários"
+    },
+    {
+      "name": "Clientes"
+    },
+    {
+      "name": "Unidades de Medida"
+    },
+    {
+      "name": "Ingredientes"
+    },
+    {
+      "name": "Movimentações de Estoque"
+    },
+    {
+      "name": "Produtos"
+    },
+    {
+      "name": "Pedidos"
+    },
+    {
+      "name": "Alertas"
+    },
+    {
+      "name": "Recomendações"
+    },
+    {
+      "name": "Dashboard"
+    }
+  ],
+  "paths": {
+    "/api/v1/saude": {
+      "get": {
+        "summary": "Consultar saúde da API",
+        "deprecated": false,
+        "description": "Endpoint público para verificar disponibilidade básica da aplicação e do banco. Equivalente ao endpoint de diagnóstico existente no projeto, versionado aqui sob /api/v1.",
+        "operationId": "consultarSaude",
+        "tags": [
+          "Saúde"
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "API e banco disponíveis.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthStatus"
+                }
+              }
+            },
+            "headers": {}
+          },
+          "503": {
+            "$ref": "#/components/responses/ServiceUnavailable",
+            "description": "Serviço de otimização ou dependência temporariamente indisponível."
+          }
+        },
+        "security": []
+      }
+    },
+    "/api/v1/auth/administrador": {
+      "post": {
+        "summary": "Criar primeira conta de Administrador",
+        "deprecated": false,
+        "description": "UC1. Operação de inicialização: somente pode ser concluída quando ainda não existir uma conta Administrador. A senha deve ser armazenada exclusivamente como hash.",
+        "operationId": "criarContaAdministrador",
+        "tags": [
+          "Autenticação"
+        ],
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateAdminDTO"
+              },
+              "example": {
+                "nome": "Mariana Oliveira",
+                "email": "mariana.oliveira@exemplo.com",
+                "senha": "SenhaForte#2026"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Conta Administrador criada.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Usuario"
+                },
+                "example": {
+                  "id": 12,
+                  "nome": "Mariana Oliveira",
+                  "email": "mariana.oliveira@exemplo.com",
+                  "perfil": "ADMINISTRADOR",
+                  "ativo": true
+                }
+              }
+            },
+            "headers": {
+              "Location": {
+                "required": false,
+                "description": "URI do recurso recém-criado.",
+                "schema": {
+                  "type": "string",
+                  "format": "uri",
+                  "example": "http://localhost:8080/api/v1/clientes/31"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest",
+            "description": "Requisição malformada ou parâmetros incompatíveis."
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict",
+            "description": "Conflito com o estado atual ou restrição de integridade referencial."
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationError",
+            "description": "Os dados foram compreendidos, mas violam uma regra de validação."
+          }
+        },
+        "security": []
+      }
+    },
+    "/api/v1/auth/login": {
+      "post": {
+        "summary": "Realizar login por perfil",
+        "deprecated": false,
+        "description": "UC3. Autentica por e-mail e senha, verifica se a conta está ativa e retorna token Bearer e perfil.",
+        "operationId": "autenticarUsuario",
+        "tags": [
+          "Autenticação"
+        ],
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginDTO"
+              },
+              "example": {
+                "email": "rafael.santos@exemplo.com",
+                "senha": "AcessoInicial#2026"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Autenticação realizada.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthToken"
+                }
+              }
+            },
+            "headers": {}
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest",
+            "description": "Requisição malformada ou parâmetros incompatíveis."
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized",
+            "description": "Autenticação ausente, inválida ou expirada."
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationError",
+            "description": "Os dados foram compreendidos, mas violam uma regra de validação."
+          }
+        },
+        "security": []
+      }
+    },
+    "/api/v1/usuarios": {
+      "get": {
+        "summary": "Listar usuários",
+        "deprecated": false,
+        "description": "Lista usuários cadastrados. Restrito ao perfil ADMINISTRADOR. Não retorna senha nem hash.",
+        "operationId": "listarUsuarios",
+        "tags": [
+          "Usuários"
+        ],
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "description": "Índice da página, começando em zero.",
+            "required": false,
+            "example": "",
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0
+            }
+          },
+          {
+            "name": "size",
+            "in": "query",
+            "description": "Quantidade de itens por página (máximo 100).",
+            "required": false,
+            "example": "",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20
+            }
+          },
+          {
+            "name": "sort",
+            "in": "query",
+            "description": "Ordenação no formato campo,direção. Campos aceitos dependem do recurso.",
+            "required": false,
+            "example": "",
+            "schema": {
+              "type": "string",
+              "example": "nome,asc"
+            }
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "description": "Busca textual por nome ou campos de identificação do recurso.",
+            "required": false,
+            "example": "",
+            "schema": {
+              "type": "string",
+              "maxLength": 100
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Página de usuários.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedUsuarios"
+                }
+              }
+            },
+            "headers": {}
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest",
+            "description": "Requisição malformada ou parâmetros incompatíveis."
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized",
+            "description": "Autenticação ausente, inválida ou expirada."
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden",
+            "description": "Usuário autenticado sem permissão para a operação."
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      },
+      "post": {
+        "summary": "Cadastrar funcionário",
+        "deprecated": false,
+        "description": "UC2. O perfil é definido pelo servidor como FUNCIONARIO; somente ADMINISTRADOR pode cadastrar funcionários.",
+        "operationId": "cadastrarFuncionario",
+        "tags": [
+          "Usuários"
+        ],
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateFuncionarioDTO"
+              },
+              "example": {
+                "nome": "Rafael Santos",
+                "email": "rafael.santos@exemplo.com",
+                "senha": "AcessoInicial#2026"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Funcionário cadastrado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Usuario"
+                }
+              }
+            },
+            "headers": {
+              "Location": {
+                "required": false,
+                "description": "URI do recurso recém-criado.",
+                "schema": {
+                  "type": "string",
+                  "format": "uri",
+                  "example": "http://localhost:8080/api/v1/clientes/31"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest",
+            "description": "Requisição malformada ou parâmetros incompatíveis."
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized",
+            "description": "Autenticação ausente, inválida ou expirada."
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden",
+            "description": "Usuário autenticado sem permissão para a operação."
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict",
+            "description": "Conflito com o estado atual ou restrição de integridade referencial."
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationError",
+            "description": "Os dados foram compreendidos, mas violam uma regra de validação."
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/v1/usuarios/{id}": {
+      "get": {
+        "summary": "Consultar usuário por ID",
+        "deprecated": false,
+        "description": "Retorna os dados públicos do usuário identificado. Restrito ao perfil ADMINISTRADOR.",
+        "operationId": "consultarUsuario",
+        "tags": [
+          "Usuários"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Identificador inteiro do recurso.",
+            "required": true,
+            "example": 1,
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "minimum": 1
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Usuário encontrado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Usuario"
+                }
+              }
+            },
+            "headers": {}
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized",
+            "description": "Autenticação ausente, inválida ou expirada."
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden",
+            "description": "Usuário autenticado sem permissão para a operação."
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound",
+            "description": "Recurso não encontrado."
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      },
+      "patch": {
+        "summary": "Atualizar dados do usuário",
+        "deprecated": false,
+        "description": "Atualiza parcialmente nome, e-mail ou estado ativo. O perfil e credenciais não são alterados por esta rota. Restrito ao perfil ADMINISTRADOR.",
+        "operationId": "atualizarUsuario",
+        "tags": [
+          "Usuários"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Identificador inteiro do recurso.",
+            "required": true,
+            "example": 1,
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "minimum": 1
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateUsuarioDTO"
+              },
+              "example": {
+                "nome": "Rafael Santos",
+                "email": "rafael.novo@exemplo.com",
+                "ativo": true
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Usuário atualizado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Usuario"
+                }
+              }
+            },
+            "headers": {}
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest",
+            "description": "Requisição malformada ou parâmetros incompatíveis."
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized",
+            "description": "Autenticação ausente, inválida ou expirada."
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden",
+            "description": "Usuário autenticado sem permissão para a operação."
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound",
+            "description": "Recurso não encontrado."
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict",
+            "description": "Conflito com o estado atual ou restrição de integridade referencial."
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationError",
+            "description": "Os dados foram compreendidos, mas violam uma regra de validação."
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      },
+      "delete": {
+        "summary": "Desativar usuário",
+        "deprecated": false,
+        "description": "Desativa logicamente a conta (ativo=false), preservando o histórico referenciado por pedidos e movimentações. Não executa exclusão física. Restrito ao perfil ADMINISTRADOR.",
+        "operationId": "desativarUsuario",
+        "tags": [
+          "Usuários"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Identificador inteiro do recurso.",
+            "required": true,
+            "example": 1,
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "minimum": 1
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Conta desativada; sem corpo de resposta.",
+            "headers": {}
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized",
+            "description": "Autenticação ausente, inválida ou expirada."
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden",
+            "description": "Usuário autenticado sem permissão para a operação."
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound",
+            "description": "Recurso não encontrado."
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict",
+            "description": "Conflito com o estado atual ou restrição de integridade referencial."
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/v1/clientes": {
+      "get": {
+        "summary": "Listar clientes",
+        "deprecated": false,
+        "description": "Lista clientes com paginação e busca textual por nome, contato ou endereço. Atores autorizados: ADMINISTRADOR e FUNCIONARIO.",
+        "operationId": "listarClientes",
+        "tags": [
+          "Clientes"
+        ],
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "description": "Índice da página, começando em zero.",
+            "required": false,
+            "example": "",
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0
+            }
+          },
+          {
+            "name": "size",
+            "in": "query",
+            "description": "Quantidade de itens por página (máximo 100).",
+            "required": false,
+            "example": "",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20
+            }
+          },
+          {
+            "name": "sort",
+            "in": "query",
+            "description": "Ordenação no formato campo,direção. Campos aceitos dependem do recurso.",
+            "required": false,
+            "example": "",
+            "schema": {
+              "type": "string",
+              "example": "nome,asc"
+            }
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "description": "Busca textual por nome ou campos de identificação do recurso.",
+            "required": false,
+            "example": "",
+            "schema": {
+              "type": "string",
+              "maxLength": 100
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Página de clientes.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedClientes"
+                }
+              }
+            },
+            "headers": {}
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest",
+            "description": "Requisição malformada ou parâmetros incompatíveis."
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized",
+            "description": "Autenticação ausente, inválida ou expirada."
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden",
+            "description": "Usuário autenticado sem permissão para a operação."
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      },
+      "post": {
+        "summary": "Cadastrar cliente",
+        "deprecated": false,
+        "description": "UC13. Cadastra cliente para associação opcional a pedidos. Atores autorizados: ADMINISTRADOR e FUNCIONARIO.",
+        "operationId": "cadastrarCliente",
+        "tags": [
+          "Clientes"
+        ],
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateClienteDTO"
+              },
+              "example": {
+                "nome": "Ana Clara Souza",
+                "contato": "(16) 99999-1234",
+                "endereco": "Rua das Acácias, 120 - Ribeirão Preto/SP"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Cliente cadastrado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Cliente"
+                }
+              }
+            },
+            "headers": {
+              "Location": {
+                "required": false,
+                "description": "URI do recurso recém-criado.",
+                "schema": {
+                  "type": "string",
+                  "format": "uri",
+                  "example": "http://localhost:8080/api/v1/clientes/31"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest",
+            "description": "Requisição malformada ou parâmetros incompatíveis."
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized",
+            "description": "Autenticação ausente, inválida ou expirada."
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden",
+            "description": "Usuário autenticado sem permissão para a operação."
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationError",
+            "description": "Os dados foram compreendidos, mas violam uma regra de validação."
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/v1/clientes/{id}": {
+      "get": {
+        "summary": "Consultar cliente por ID",
+        "deprecated": false,
+        "description": "Retorna os dados cadastrais do cliente. Atores autorizados: ADMINISTRADOR e FUNCIONARIO.",
+        "operationId": "consultarCliente",
+        "tags": [
+          "Clientes"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Identificador inteiro do recurso.",
+            "required": true,
+            "example": 1,
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "minimum": 1
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Cliente encontrado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Cliente"
+                }
+              }
+            },
+            "headers": {}
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized",
+            "description": "Autenticação ausente, inválida ou expirada."
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden",
+            "description": "Usuário autenticado sem permissão para a operação."
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound",
+            "description": "Recurso não encontrado."
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      },
+      "put": {
+        "summary": "Atualizar cliente",
+        "deprecated": false,
+        "description": "Substitui nome, contato e endereço do cliente. Atores autorizados: ADMINISTRADOR e FUNCIONARIO.",
+        "operationId": "atualizarCliente",
+        "tags": [
+          "Clientes"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Identificador inteiro do recurso.",
+            "required": true,
+            "example": 1,
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "minimum": 1
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateClienteDTO"
+              },
+              "example": {
+                "nome": "Ana Clara Souza",
+                "contato": "(16) 98888-1234",
+                "endereco": "Av. Independência, 500 - Ribeirão Preto/SP"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Cliente atualizado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Cliente"
+                }
+              }
+            },
+            "headers": {}
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest",
+            "description": "Requisição malformada ou parâmetros incompatíveis."
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized",
+            "description": "Autenticação ausente, inválida ou expirada."
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden",
+            "description": "Usuário autenticado sem permissão para a operação."
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound",
+            "description": "Recurso não encontrado."
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationError",
+            "description": "Os dados foram compreendidos, mas violam uma regra de validação."
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      },
+      "delete": {
+        "summary": "Excluir cliente",
+        "deprecated": false,
+        "description": "Remove o cliente quando não houver pedidos associados. Atores autorizados: ADMINISTRADOR e FUNCIONARIO. Se houver referência em pedido, a API deve responder 409 e preservar o histórico.",
+        "operationId": "excluirCliente",
+        "tags": [
+          "Clientes"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Identificador inteiro do recurso.",
+            "required": true,
+            "example": 1,
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "minimum": 1
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Cliente removido; sem corpo de resposta.",
+            "headers": {}
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized",
+            "description": "Autenticação ausente, inválida ou expirada."
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden",
+            "description": "Usuário autenticado sem permissão para a operação."
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound",
+            "description": "Recurso não encontrado."
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict",
+            "description": "Conflito com o estado atual ou restrição de integridade referencial."
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/v1/unidades-medida": {
+      "get": {
+        "summary": "Listar unidades de medida",
+        "deprecated": false,
+        "description": "Lista unidades e suas porções padrão sugeridas. Restrito ao perfil ADMINISTRADOR. A sugestão é usada apenas no pré-preenchimento de novos ingredientes.",
+        "operationId": "listarUnidadesMedida",
+        "tags": [
+          "Unidades de Medida"
+        ],
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "description": "Índice da página, começando em zero.",
+            "required": false,
+            "example": "",
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0
+            }
+          },
+          {
+            "name": "size",
+            "in": "query",
+            "description": "Quantidade de itens por página (máximo 100).",
+            "required": false,
+            "example": "",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20
+            }
+          },
+          {
+            "name": "sort",
+            "in": "query",
+            "description": "Ordenação no formato campo,direção. Campos aceitos dependem do recurso.",
+            "required": false,
+            "example": "",
+            "schema": {
+              "type": "string",
+              "example": "nome,asc"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Página de unidades de medida.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedUnidadesMedida"
+                }
+              }
+            },
+            "headers": {}
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized",
+            "description": "Autenticação ausente, inválida ou expirada."
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden",
+            "description": "Usuário autenticado sem permissão para a operação."
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      },
+      "post": {
+        "summary": "Definir unidade de medida",
+        "deprecated": false,
+        "description": "UC20/US26. Cria uma unidade e sua porção padrão sugerida. Restrito ao perfil ADMINISTRADOR. A operação não altera ingredientes já cadastrados.",
+        "operationId": "cadastrarUnidadeMedida",
+        "tags": [
+          "Unidades de Medida"
+        ],
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateUnidadeMedidaDTO"
+              },
+              "example": {
+                "unidadeMedida": "kg",
+                "porcaoPadrao": 0.04
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Unidade criada.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnidadeMedida"
+                }
+              }
+            },
+            "headers": {
+              "Location": {
+                "required": false,
+                "description": "URI do recurso recém-criado.",
+                "schema": {
+                  "type": "string",
+                  "format": "uri",
+                  "example": "http://localhost:8080/api/v1/clientes/31"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest",
+            "description": "Requisição malformada ou parâmetros incompatíveis."
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized",
+            "description": "Autenticação ausente, inválida ou expirada."
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden",
+            "description": "Usuário autenticado sem permissão para a operação."
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict",
+            "description": "Conflito com o estado atual ou restrição de integridade referencial."
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationError",
+            "description": "Os dados foram compreendidos, mas violam uma regra de validação."
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/v1/unidades-medida/{unidadeMedida}": {
+      "get": {
+        "summary": "Consultar unidade de medida",
+        "deprecated": false,
+        "description": "Consulta uma unidade pela chave textual. Restrito ao perfil ADMINISTRADOR.",
+        "operationId": "consultarUnidadeMedida",
+        "tags": [
+          "Unidades de Medida"
+        ],
+        "parameters": [
+          {
+            "name": "unidadeMedida",
+            "in": "path",
+            "description": "Código da unidade de medida.",
+            "required": true,
+            "example": "",
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 20
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Unidade encontrada.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnidadeMedida"
+                }
+              }
+            },
+            "headers": {}
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized",
+            "description": "Autenticação ausente, inválida ou expirada."
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden",
+            "description": "Usuário autenticado sem permissão para a operação."
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound",
+            "description": "Recurso não encontrado."
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      },
+      "put": {
+        "summary": "Atualizar porção padrão da unidade",
+        "deprecated": false,
+        "description": "Altera somente o valor sugerido para novos ingredientes; restrito ao perfil ADMINISTRADOR. não recalcula registros existentes.",
+        "operationId": "atualizarUnidadeMedida",
+        "tags": [
+          "Unidades de Medida"
+        ],
+        "parameters": [
+          {
+            "name": "unidadeMedida",
+            "in": "path",
+            "description": "Código da unidade de medida.",
+            "required": true,
+            "example": "",
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 20
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateUnidadeMedidaDTO"
+              },
+              "example": {
+                "porcaoPadrao": 0.05
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Unidade atualizada.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnidadeMedida"
+                }
+              }
+            },
+            "headers": {}
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest",
+            "description": "Requisição malformada ou parâmetros incompatíveis."
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized",
+            "description": "Autenticação ausente, inválida ou expirada."
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden",
+            "description": "Usuário autenticado sem permissão para a operação."
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound",
+            "description": "Recurso não encontrado."
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationError",
+            "description": "Os dados foram compreendidos, mas violam uma regra de validação."
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      },
+      "delete": {
+        "summary": "Excluir unidade de medida",
+        "deprecated": false,
+        "description": "Remove a unidade somente se nenhum ingrediente a utilizar. Restrito ao perfil ADMINISTRADOR.",
+        "operationId": "excluirUnidadeMedida",
+        "tags": [
+          "Unidades de Medida"
+        ],
+        "parameters": [
+          {
+            "name": "unidadeMedida",
+            "in": "path",
+            "description": "Código da unidade de medida.",
+            "required": true,
+            "example": "",
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 20
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Unidade removida; sem corpo de resposta.",
+            "headers": {}
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized",
+            "description": "Autenticação ausente, inválida ou expirada."
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden",
+            "description": "Usuário autenticado sem permissão para a operação."
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound",
+            "description": "Recurso não encontrado."
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict",
+            "description": "Conflito com o estado atual ou restrição de integridade referencial."
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/v1/ingredientes": {
+      "get": {
+        "summary": "Listar ingredientes",
+        "deprecated": false,
+        "description": "Lista ingredientes com paginação. Operação de cadastro/gestão restrita ao perfil ADMINISTRADOR. Filtros opcionais: q (nome), unidadeMedida e precisaReposicao. O saldo apresentado deriva das entradas ainda disponíveis.",
+        "operationId": "listarIngredientes",
+        "tags": [
+          "Ingredientes"
+        ],
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "description": "Índice da página, começando em zero.",
+            "required": false,
+            "example": "",
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0
+            }
+          },
+          {
+            "name": "size",
+            "in": "query",
+            "description": "Quantidade de itens por página (máximo 100).",
+            "required": false,
+            "example": "",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20
+            }
+          },
+          {
+            "name": "sort",
+            "in": "query",
+            "description": "Ordenação no formato campo,direção. Campos aceitos dependem do recurso.",
+            "required": false,
+            "example": "",
+            "schema": {
+              "type": "string",
+              "example": "nome,asc"
+            }
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "description": "Busca textual por nome ou campos de identificação do recurso.",
+            "required": false,
+            "example": "",
+            "schema": {
+              "type": "string",
+              "maxLength": 100
+            }
+          },
+          {
+            "name": "unidadeMedida",
+            "in": "query",
+            "description": "Filtra por código de unidade.",
+            "required": false,
+            "example": "",
+            "schema": {
+              "type": "string",
+              "maxLength": 20
+            }
+          },
+          {
+            "name": "precisaReposicao",
+            "in": "query",
+            "description": "Filtra ingredientes em situação de reposição.",
+            "required": false,
+            "example": "",
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Página de ingredientes.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedIngredientes"
+                }
+              }
+            },
+            "headers": {}
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest",
+            "description": "Requisição malformada ou parâmetros incompatíveis."
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized",
+            "description": "Autenticação ausente, inválida ou expirada."
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden",
+            "description": "Usuário autenticado sem permissão para a operação."
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      },
+      "post": {
+        "summary": "Cadastrar ingrediente",
+        "deprecated": false,
+        "description": "UC4. Cadastra dados do ingrediente. Restrito ao perfil ADMINISTRADOR. A unidade deve existir; o estoque inicial é zero e deve ser incluído por movimentação ENTRADA.",
+        "operationId": "cadastrarIngrediente",
+        "tags": [
+          "Ingredientes"
+        ],
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateIngredienteDTO"
+              },
+              "example": {
+                "nome": "Açaí (polpa)",
+                "unidadeMedida": "kg",
+                "custoUnitario": 18.5,
+                "porcaoPadrao": 0.15,
+                "quantidadeMinima": 10
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Ingrediente cadastrado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ingrediente"
+                },
+                "example": {
+                  "id": 1,
+                  "nome": "Açaí (polpa)",
+                  "unidadeMedida": "kg",
+                  "custoUnitario": 18.5,
+                  "porcaoPadrao": 0.15,
+                  "quantidadeEstoque": 0,
+                  "quantidadeMinima": 10,
+                  "precisaReposicao": true
+                }
+              }
+            },
+            "headers": {
+              "Location": {
+                "required": false,
+                "description": "URI do recurso recém-criado.",
+                "schema": {
+                  "type": "string",
+                  "format": "uri",
+                  "example": "http://localhost:8080/api/v1/clientes/31"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest",
+            "description": "Requisição malformada ou parâmetros incompatíveis."
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized",
+            "description": "Autenticação ausente, inválida ou expirada."
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden",
+            "description": "Usuário autenticado sem permissão para a operação."
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound",
+            "description": "Recurso não encontrado."
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationError",
+            "description": "Os dados foram compreendidos, mas violam uma regra de validação."
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/v1/ingredientes/{id}": {
+      "get": {
+        "summary": "Consultar ingrediente por ID",
+        "deprecated": false,
+        "description": "Retorna cadastro, saldo e sinalização de reposição. Restrito ao perfil ADMINISTRADOR.",
+        "operationId": "consultarIngrediente",
+        "tags": [
+          "Ingredientes"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Identificador inteiro do recurso.",
+            "required": true,
+            "example": 1,
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "minimum": 1
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Ingrediente encontrado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ingrediente"
+                }
+              }
+            },
+            "headers": {}
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized",
+            "description": "Autenticação ausente, inválida ou expirada."
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden",
+            "description": "Usuário autenticado sem permissão para a operação."
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound",
+            "description": "Recurso não encontrado."
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      },
+      "put": {
+        "summary": "Atualizar ingrediente",
+        "deprecated": false,
+        "description": "Atualiza dados cadastrais e limite mínimo. Restrito ao perfil ADMINISTRADOR. O saldo não pode ser editado diretamente; utilize movimentações de estoque.",
+        "operationId": "atualizarIngrediente",
+        "tags": [
+          "Ingredientes"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Identificador inteiro do recurso.",
+            "required": true,
+            "example": 1,
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "minimum": 1
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateIngredienteDTO"
+              },
+              "example": {
+                "nome": "Açaí (polpa)",
+                "unidadeMedida": "kg",
+                "custoUnitario": 19,
+                "porcaoPadrao": 0.15,
+                "quantidadeMinima": 12
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Ingrediente atualizado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ingrediente"
+                },
+                "example": {
+                  "id": 1,
+                  "nome": "Açaí (polpa)",
+                  "unidadeMedida": "kg",
+                  "custoUnitario": 19,
+                  "porcaoPadrao": 0.15,
+                  "quantidadeEstoque": 40,
+                  "quantidadeMinima": 12,
+                  "precisaReposicao": false
+                }
+              }
+            },
+            "headers": {}
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest",
+            "description": "Requisição malformada ou parâmetros incompatíveis."
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized",
+            "description": "Autenticação ausente, inválida ou expirada."
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden",
+            "description": "Usuário autenticado sem permissão para a operação."
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound",
+            "description": "Recurso não encontrado."
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationError",
+            "description": "Os dados foram compreendidos, mas violam uma regra de validação."
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      },
+      "delete": {
+        "summary": "Excluir ingrediente",
+        "deprecated": false,
+        "description": "Remove ingrediente somente quando não houver composição de produto nem histórico de movimentação vinculado. Restrito ao perfil ADMINISTRADOR.",
+        "operationId": "excluirIngrediente",
+        "tags": [
+          "Ingredientes"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Identificador inteiro do recurso.",
+            "required": true,
+            "example": 1,
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "minimum": 1
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Ingrediente removido; sem corpo de resposta.",
+            "headers": {}
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized",
+            "description": "Autenticação ausente, inválida ou expirada."
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden",
+            "description": "Usuário autenticado sem permissão para a operação."
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound",
+            "description": "Recurso não encontrado."
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict",
+            "description": "Conflito com o estado atual ou restrição de integridade referencial."
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/v1/ingredientes/{id}/movimentacoes": {
+      "get": {
+        "summary": "Listar movimentações de um ingrediente",
+        "deprecated": false,
+        "description": "Lista o histórico de entradas e saídas de um ingrediente específico, com filtros por tipo e período.",
+        "operationId": "listarMovimentacoesDoIngrediente",
+        "tags": [
+          "Movimentações de Estoque"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Identificador inteiro do recurso.",
+            "required": true,
+            "example": "",
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "minimum": 1
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "description": "Índice da página, começando em zero.",
+            "required": false,
+            "example": "",
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0
+            }
+          },
+          {
+            "name": "size",
+            "in": "query",
+            "description": "Quantidade de itens por página (máximo 100).",
+            "required": false,
+            "example": "",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20
+            }
+          },
+          {
+            "name": "tipo",
+            "in": "query",
+            "description": "Filtra por ENTRADA ou SAIDA.",
+            "required": false,
+            "example": "",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "ENTRADA",
+                "SAIDA"
+              ]
+            }
+          },
+          {
+            "name": "dataInicio",
+            "in": "query",
+            "description": "Data inicial inclusiva.",
+            "required": false,
+            "example": "",
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          },
+          {
+            "name": "dataFim",
+            "in": "query",
+            "description": "Data final inclusiva.",
+            "required": false,
+            "example": "",
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Página de movimentações.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedMovimentacoesEstoque"
+                }
+              }
+            },
+            "headers": {}
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized",
+            "description": "Autenticação ausente, inválida ou expirada."
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden",
+            "description": "Usuário autenticado sem permissão para a operação."
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound",
+            "description": "Recurso não encontrado."
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/v1/movimentacoes-estoque": {
+      "get": {
+        "summary": "Listar movimentações de estoque",
+        "deprecated": false,
+        "description": "Consulta o livro de movimentações com paginação e filtros por ingrediente, tipo e período. Registros são somente leitura para preservar auditoria.",
+        "operationId": "listarMovimentacoesEstoque",
+        "tags": [
+          "Movimentações de Estoque"
+        ],
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "description": "Índice da página, começando em zero.",
+            "required": false,
+            "example": "",
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0
+            }
+          },
+          {
+            "name": "size",
+            "in": "query",
+            "description": "Quantidade de itens por página (máximo 100).",
+            "required": false,
+            "example": "",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20
+            }
+          },
+          {
+            "name": "sort",
+            "in": "query",
+            "description": "Ordenação no formato campo,direção. Campos aceitos dependem do recurso.",
+            "required": false,
+            "example": "",
+            "schema": {
+              "type": "string",
+              "example": "nome,asc"
+            }
+          },
+          {
+            "name": "ingredienteId",
+            "in": "query",
+            "description": "Filtra por identificador do ingrediente.",
+            "required": false,
+            "example": "",
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "minimum": 1
+            }
+          },
+          {
+            "name": "tipo",
+            "in": "query",
+            "description": "Filtra por tipo.",
+            "required": false,
+            "example": "",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "ENTRADA",
+                "SAIDA"
+              ]
+            }
+          },
+          {
+            "name": "dataInicio",
+            "in": "query",
+            "description": "Data inicial inclusiva.",
+            "required": false,
+            "example": "",
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          },
+          {
+            "name": "dataFim",
+            "in": "query",
+            "description": "Data final inclusiva.",
+            "required": false,
+            "example": "",
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Página de movimentações.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedMovimentacoesEstoque"
+                }
+              }
+            },
+            "headers": {}
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest",
+            "description": "Requisição malformada ou parâmetros incompatíveis."
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized",
+            "description": "Autenticação ausente, inválida ou expirada."
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden",
+            "description": "Usuário autenticado sem permissão para a operação."
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      },
+      "post": {
+        "summary": "Registrar movimentação de estoque",
+        "deprecated": false,
+        "description": "UC9. Registra ENTRADA ou SAIDA. Entrada cria linha de estoque com validade e quantidadeRestante inicial igual à quantidade. Saída consome linhas válidas em ordem FEFO (primeiro a vencer, primeiro a sair); não permite consumir estoque vencido. usuarioId vem do token.",
+        "operationId": "registrarMovimentacaoEstoque",
+        "tags": [
+          "Movimentações de Estoque"
+        ],
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateMovimentacaoEstoqueDTO"
+              },
+              "example": {
+                "ingredienteId": 1,
+                "tipo": "ENTRADA",
+                "quantidade": 15,
+                "observacao": "Compra semanal de polpa",
+                "dataValidade": "2026-11-30"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Movimentação registrada.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MovimentacaoEstoque"
+                }
+              }
+            },
+            "headers": {
+              "Location": {
+                "required": false,
+                "description": "URI do recurso recém-criado.",
+                "schema": {
+                  "type": "string",
+                  "format": "uri",
+                  "example": "http://localhost:8080/api/v1/clientes/31"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest",
+            "description": "Requisição malformada ou parâmetros incompatíveis."
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized",
+            "description": "Autenticação ausente, inválida ou expirada."
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden",
+            "description": "Usuário autenticado sem permissão para a operação."
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound",
+            "description": "Recurso não encontrado."
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict",
+            "description": "Conflito com o estado atual ou restrição de integridade referencial."
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationError",
+            "description": "Os dados foram compreendidos, mas violam uma regra de validação."
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/v1/produtos": {
+      "get": {
+        "summary": "Listar produtos",
+        "deprecated": false,
+        "description": "Lista produtos com paginação e filtros opcionais q e ativo. Restrito ao perfil ADMINISTRADOR.",
+        "operationId": "listarProdutos",
+        "tags": [
+          "Produtos"
+        ],
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "description": "Índice da página, começando em zero.",
+            "required": false,
+            "example": "",
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0
+            }
+          },
+          {
+            "name": "size",
+            "in": "query",
+            "description": "Quantidade de itens por página (máximo 100).",
+            "required": false,
+            "example": "",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20
+            }
+          },
+          {
+            "name": "sort",
+            "in": "query",
+            "description": "Ordenação no formato campo,direção. Campos aceitos dependem do recurso.",
+            "required": false,
+            "example": "",
+            "schema": {
+              "type": "string",
+              "example": "nome,asc"
+            }
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "description": "Busca textual por nome ou campos de identificação do recurso.",
+            "required": false,
+            "example": "",
+            "schema": {
+              "type": "string",
+              "maxLength": 100
+            }
+          },
+          {
+            "name": "ativo",
+            "in": "query",
+            "description": "Filtra por disponibilidade para venda.",
+            "required": false,
+            "example": "",
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Página de produtos.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedProdutos"
+                }
+              }
+            },
+            "headers": {}
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest",
+            "description": "Requisição malformada ou parâmetros incompatíveis."
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized",
+            "description": "Autenticação ausente, inválida ou expirada."
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden",
+            "description": "Usuário autenticado sem permissão para a operação."
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      },
+      "post": {
+        "summary": "Cadastrar produto e composição",
+        "deprecated": false,
+        "description": "UC5. Cadastra o produto e seus ingredientes associados. Restrito ao perfil ADMINISTRADOR. Cada quantidade utilizada deve ser maior que zero; a composição deve referenciar ingredientes existentes.",
+        "operationId": "cadastrarProduto",
+        "tags": [
+          "Produtos"
+        ],
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateProdutoDTO"
+              },
+              "example": {
+                "nome": "Açaí Tradicional 300ml",
+                "precoVenda": 12.9,
+                "ativo": true,
+                "composicao": [
+                  {
+                    "ingredienteId": 1,
+                    "quantidadeUtilizada": 0.3
+                  },
+                  {
+                    "ingredienteId": 2,
+                    "quantidadeUtilizada": 0.03
+                  },
+                  {
+                    "ingredienteId": 7,
+                    "quantidadeUtilizada": 1
+                  }
+                ]
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Produto cadastrado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Produto"
+                }
+              }
+            },
+            "headers": {
+              "Location": {
+                "required": false,
+                "description": "URI do recurso recém-criado.",
+                "schema": {
+                  "type": "string",
+                  "format": "uri",
+                  "example": "http://localhost:8080/api/v1/clientes/31"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest",
+            "description": "Requisição malformada ou parâmetros incompatíveis."
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized",
+            "description": "Autenticação ausente, inválida ou expirada."
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden",
+            "description": "Usuário autenticado sem permissão para a operação."
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound",
+            "description": "Recurso não encontrado."
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationError",
+            "description": "Os dados foram compreendidos, mas violam uma regra de validação."
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/v1/produtos/{id}": {
+      "get": {
+        "summary": "Consultar produto por ID",
+        "deprecated": false,
+        "description": "Retorna os dados comerciais e a composição cadastrada. Restrito ao perfil ADMINISTRADOR.",
+        "operationId": "consultarProduto",
+        "tags": [
+          "Produtos"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Identificador inteiro do recurso.",
+            "required": true,
+            "example": 1,
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "minimum": 1
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Produto encontrado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Produto"
+                }
+              }
+            },
+            "headers": {}
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized",
+            "description": "Autenticação ausente, inválida ou expirada."
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden",
+            "description": "Usuário autenticado sem permissão para a operação."
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound",
+            "description": "Recurso não encontrado."
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      },
+      "put": {
+        "summary": "Atualizar dados comerciais do produto",
+        "deprecated": false,
+        "description": "UC6. Atualiza nome, preço de venda e disponibilidade. Restrito ao perfil ADMINISTRADOR. O preço anterior dos itens já vendidos permanece registrado nos pedidos.",
+        "operationId": "atualizarProduto",
+        "tags": [
+          "Produtos"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Identificador inteiro do recurso.",
+            "required": true,
+            "example": 1,
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "minimum": 1
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateProdutoDTO"
+              },
+              "example": {
+                "nome": "Açaí Tradicional 300ml",
+                "precoVenda": 13.9,
+                "ativo": true
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Produto atualizado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Produto"
+                }
+              }
+            },
+            "headers": {}
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest",
+            "description": "Requisição malformada ou parâmetros incompatíveis."
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized",
+            "description": "Autenticação ausente, inválida ou expirada."
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden",
+            "description": "Usuário autenticado sem permissão para a operação."
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound",
+            "description": "Recurso não encontrado."
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationError",
+            "description": "Os dados foram compreendidos, mas violam uma regra de validação."
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      },
+      "delete": {
+        "summary": "Desativar produto",
+        "deprecated": false,
+        "description": "Desativa logicamente o produto (ativo=false), preservando pedidos e histórico comercial. Restrito ao perfil ADMINISTRADOR. Não executa exclusão física.",
+        "operationId": "desativarProduto",
+        "tags": [
+          "Produtos"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Identificador inteiro do recurso.",
+            "required": true,
+            "example": 1,
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "minimum": 1
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Produto desativado; sem corpo de resposta.",
+            "headers": {}
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized",
+            "description": "Autenticação ausente, inválida ou expirada."
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden",
+            "description": "Usuário autenticado sem permissão para a operação."
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound",
+            "description": "Recurso não encontrado."
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict",
+            "description": "Conflito com o estado atual ou restrição de integridade referencial."
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/v1/produtos/{id}/composicao": {
+      "get": {
+        "summary": "Consultar composição do produto",
+        "deprecated": false,
+        "description": "Retorna os ingredientes e as quantidades utilizadas para produzir uma unidade. Restrito ao perfil ADMINISTRADOR.",
+        "operationId": "consultarComposicaoProduto",
+        "tags": [
+          "Produtos"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Identificador inteiro do recurso.",
+            "required": true,
+            "example": 1,
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "minimum": 1
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Composição retornada.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ComposicaoProduto"
+                }
+              }
+            },
+            "headers": {}
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized",
+            "description": "Autenticação ausente, inválida ou expirada."
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden",
+            "description": "Usuário autenticado sem permissão para a operação."
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound",
+            "description": "Recurso não encontrado."
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      },
+      "put": {
+        "summary": "Substituir composição do produto",
+        "deprecated": false,
+        "description": "Substitui integralmente a composição atual do produto. Restrito ao perfil ADMINISTRADOR. A operação deve validar existência dos ingredientes e quantidades positivas.",
+        "operationId": "substituirComposicaoProduto",
+        "tags": [
+          "Produtos"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Identificador inteiro do recurso.",
+            "required": true,
+            "example": 1,
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "minimum": 1
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SubstituirComposicaoDTO"
+              },
+              "example": {
+                "itens": [
+                  {
+                    "ingredienteId": 1,
+                    "quantidadeUtilizada": 0.3
+                  },
+                  {
+                    "ingredienteId": 7,
+                    "quantidadeUtilizada": 1
+                  }
+                ]
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Composição atualizada.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Produto"
+                }
+              }
+            },
+            "headers": {}
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest",
+            "description": "Requisição malformada ou parâmetros incompatíveis."
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized",
+            "description": "Autenticação ausente, inválida ou expirada."
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden",
+            "description": "Usuário autenticado sem permissão para a operação."
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound",
+            "description": "Recurso não encontrado."
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationError",
+            "description": "Os dados foram compreendidos, mas violam uma regra de validação."
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/v1/pedidos": {
+      "get": {
+        "summary": "Listar pedidos",
+        "deprecated": false,
+        "description": "Lista pedidos com paginação e filtros por status, cliente e intervalo de datas. Pedidos cancelados permanecem consultáveis, mas são excluídos dos indicadores de faturamento.",
+        "operationId": "listarPedidos",
+        "tags": [
+          "Pedidos"
+        ],
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "description": "Índice da página, começando em zero.",
+            "required": false,
+            "example": "",
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0
+            }
+          },
+          {
+            "name": "size",
+            "in": "query",
+            "description": "Quantidade de itens por página (máximo 100).",
+            "required": false,
+            "example": "",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20
+            }
+          },
+          {
+            "name": "sort",
+            "in": "query",
+            "description": "Ordenação no formato campo,direção. Campos aceitos dependem do recurso.",
+            "required": false,
+            "example": "",
+            "schema": {
+              "type": "string",
+              "example": "nome,asc"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "description": "Filtra pela situação do pedido.",
+            "required": false,
+            "example": "",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "ATIVO",
+                "CANCELADO"
+              ]
+            }
+          },
+          {
+            "name": "clienteId",
+            "in": "query",
+            "description": "Filtra pelo cliente associado.",
+            "required": false,
+            "example": "",
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "minimum": 1
+            }
+          },
+          {
+            "name": "dataInicio",
+            "in": "query",
+            "description": "Início do intervalo inclusivo.",
+            "required": false,
+            "example": "",
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          },
+          {
+            "name": "dataFim",
+            "in": "query",
+            "description": "Fim do intervalo inclusivo.",
+            "required": false,
+            "example": "",
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Página de pedidos.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedPedidos"
+                }
+              }
+            },
+            "headers": {}
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest",
+            "description": "Requisição malformada ou parâmetros incompatíveis."
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized",
+            "description": "Autenticação ausente, inválida ou expirada."
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden",
+            "description": "Usuário autenticado sem permissão para a operação."
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      },
+      "post": {
+        "summary": "Registrar pedido",
+        "deprecated": false,
+        "description": "UC12. Registra pedido com um ou mais produtos. O usuário é obtido do token; o backend captura os preços vigentes, calcula o total, valida estoque válido e gera baixas de estoque automáticas com motivo PEDIDO. Pedido e movimentações devem ser gravados de forma transacional.",
+        "operationId": "registrarPedido",
+        "tags": [
+          "Pedidos"
+        ],
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreatePedidoDTO"
+              },
+              "example": {
+                "clienteId": 31,
+                "itens": [
+                  {
+                    "produtoId": 2,
+                    "quantidade": 2
+                  }
+                ]
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Pedido registrado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Pedido"
+                }
+              }
+            },
+            "headers": {
+              "Location": {
+                "required": false,
+                "description": "URI do recurso recém-criado.",
+                "schema": {
+                  "type": "string",
+                  "format": "uri",
+                  "example": "http://localhost:8080/api/v1/clientes/31"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest",
+            "description": "Requisição malformada ou parâmetros incompatíveis."
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized",
+            "description": "Autenticação ausente, inválida ou expirada."
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden",
+            "description": "Usuário autenticado sem permissão para a operação."
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound",
+            "description": "Recurso não encontrado."
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict",
+            "description": "Conflito com o estado atual ou restrição de integridade referencial."
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationError",
+            "description": "Os dados foram compreendidos, mas violam uma regra de validação."
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/v1/pedidos/{id}": {
+      "get": {
+        "summary": "Consultar pedido por ID",
+        "deprecated": false,
+        "description": "Retorna pedido, itens, preços históricos e estado do cancelamento.",
+        "operationId": "consultarPedido",
+        "tags": [
+          "Pedidos"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Identificador inteiro do recurso.",
+            "required": true,
+            "example": "",
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "minimum": 1
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Pedido encontrado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Pedido"
+                }
+              }
+            },
+            "headers": {}
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized",
+            "description": "Autenticação ausente, inválida ou expirada."
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden",
+            "description": "Usuário autenticado sem permissão para a operação."
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound",
+            "description": "Recurso não encontrado."
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/v1/pedidos/{id}/cancelamento": {
+      "post": {
+        "summary": "Cancelar pedido",
+        "deprecated": false,
+        "description": "Extensão do escopo (UC21/US27, fora do escopo original do semestre conforme nota do UML). Marca o pedido como CANCELADO e registra data e usuário responsável. De acordo com a decisão documentada, não devolve estoque automaticamente.",
+        "operationId": "cancelarPedido",
+        "tags": [
+          "Pedidos"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Identificador inteiro do recurso.",
+            "required": true,
+            "example": "",
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "minimum": 1
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CancelamentoPedidoDTO"
+              },
+              "example": {
+                "observacao": "Pedido lançado em duplicidade"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Pedido cancelado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Pedido"
+                }
+              }
+            },
+            "headers": {}
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized",
+            "description": "Autenticação ausente, inválida ou expirada."
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden",
+            "description": "Usuário autenticado sem permissão para a operação."
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound",
+            "description": "Recurso não encontrado."
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict",
+            "description": "Conflito com o estado atual ou restrição de integridade referencial."
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationError",
+            "description": "Os dados foram compreendidos, mas violam uma regra de validação."
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/v1/alertas/reposicao": {
+      "get": {
+        "summary": "Listar alertas de reposição",
+        "deprecated": false,
+        "description": "UC15. Retorna ingredientes cujo saldo válido está abaixo da quantidade mínima definida.",
+        "operationId": "listarAlertasReposicao",
+        "tags": [
+          "Alertas"
+        ],
+        "parameters": [
+          {
+            "name": "somenteCriticos",
+            "in": "query",
+            "description": "Quando true, retorna somente ingredientes com saldo válido igual a zero.",
+            "required": false,
+            "example": "",
+            "schema": {
+              "type": "boolean",
+              "default": false
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Alertas de reposição retornados.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListaAlertasReposicao"
+                }
+              }
+            },
+            "headers": {}
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized",
+            "description": "Autenticação ausente, inválida ou expirada."
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden",
+            "description": "Usuário autenticado sem permissão para a operação."
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/v1/alertas/validade": {
+      "get": {
+        "summary": "Listar alertas de validade",
+        "deprecated": false,
+        "description": "UC16. Considera somente linhas de ENTRADA com dataValidade informada; pode retornar itens próximos do vencimento e vencidos.",
+        "operationId": "listarAlertasValidade",
+        "tags": [
+          "Alertas"
+        ],
+        "parameters": [
+          {
+            "name": "diasAntecedencia",
+            "in": "query",
+            "description": "Quantidade de dias para considerar uma linha próxima do vencimento.",
+            "required": false,
+            "example": "",
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 365,
+              "default": 7
+            }
+          },
+          {
+            "name": "incluirVencidos",
+            "in": "query",
+            "description": "Inclui linhas cuja data de validade já passou.",
+            "required": false,
+            "example": "",
+            "schema": {
+              "type": "boolean",
+              "default": true
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Alertas de validade retornados.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListaAlertasValidade"
+                }
+              }
+            },
+            "headers": {}
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest",
+            "description": "Requisição malformada ou parâmetros incompatíveis."
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized",
+            "description": "Autenticação ausente, inválida ou expirada."
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden",
+            "description": "Usuário autenticado sem permissão para a operação."
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/v1/recomendacoes/producao": {
+      "post": {
+        "summary": "Calcular recomendação ótima de produção",
+        "deprecated": false,
+        "description": "UC10 e UC11. Restrito ao perfil ADMINISTRADOR. Executa Programação Linear Inteira para calcular quantidades inteiras por produto, maximizando o lucro estimado (preço de venda menos custo dos ingredientes), respeitando o estoque válido disponível. Resultado sob demanda; não cria histórico persistido.",
+        "operationId": "calcularRecomendacaoProducao",
+        "tags": [
+          "Recomendações"
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Recomendação calculada.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProducaoRecomendacao"
+                }
+              }
+            },
+            "headers": {}
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized",
+            "description": "Autenticação ausente, inválida ou expirada."
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden",
+            "description": "Usuário autenticado sem permissão para a operação."
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationError",
+            "description": "Os dados foram compreendidos, mas violam uma regra de validação."
+          },
+          "503": {
+            "$ref": "#/components/responses/ServiceUnavailable",
+            "description": "Serviço de otimização ou dependência temporariamente indisponível."
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/v1/recomendacoes/reposicao": {
+      "post": {
+        "summary": "Calcular recomendação de reposição",
+        "deprecated": false,
+        "description": "UC14. Restrito ao perfil ADMINISTRADOR. Calcula quantidades de compra recomendadas considerando o período de consumo informado e o orçamento máximo disponível. Resultado sob demanda; não persiste histórico.",
+        "operationId": "calcularRecomendacaoReposicao",
+        "tags": [
+          "Recomendações"
+        ],
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateReposicaoDTO"
+              },
+              "example": {
+                "periodoDias": 30,
+                "orcamento": 500
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Recomendação de reposição calculada.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReposicaoRecomendacao"
+                }
+              }
+            },
+            "headers": {}
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest",
+            "description": "Requisição malformada ou parâmetros incompatíveis."
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized",
+            "description": "Autenticação ausente, inválida ou expirada."
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden",
+            "description": "Usuário autenticado sem permissão para a operação."
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationError",
+            "description": "Os dados foram compreendidos, mas violam uma regra de validação."
+          },
+          "503": {
+            "$ref": "#/components/responses/ServiceUnavailable",
+            "description": "Serviço de otimização ou dependência temporariamente indisponível."
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/v1/sugestoes-marketing": {
+      "post": {
+        "summary": "Gerar sugestões de marketing",
+        "deprecated": false,
+        "description": "UC18. Restrito ao perfil ADMINISTRADOR. Gera sugestões textuais com base nos dados comerciais disponíveis. As sugestões são informativas e não são publicadas automaticamente; não há histórico persistido no modelo atual.",
+        "operationId": "gerarSugestoesMarketing",
+        "tags": [
+          "Recomendações"
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Sugestões geradas.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SugestaoMarketing"
+                }
+              }
+            },
+            "headers": {}
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized",
+            "description": "Autenticação ausente, inválida ou expirada."
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden",
+            "description": "Usuário autenticado sem permissão para a operação."
+          },
+          "503": {
+            "$ref": "#/components/responses/ServiceUnavailable",
+            "description": "Serviço de otimização ou dependência temporariamente indisponível."
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/v1/dashboard": {
+      "get": {
+        "summary": "Consultar dashboard gerencial",
+        "deprecated": false,
+        "description": "UC17. Retorna indicadores consolidados no período. Restrito ao perfil ADMINISTRADOR. Apenas pedidos ATIVOS compõem faturamento, ticket médio e ranking de vendas.",
+        "operationId": "consultarDashboard",
+        "tags": [
+          "Dashboard"
+        ],
+        "parameters": [
+          {
+            "name": "dataInicio",
+            "in": "query",
+            "description": "Data inicial inclusiva do período.",
+            "required": true,
+            "example": "",
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          },
+          {
+            "name": "dataFim",
+            "in": "query",
+            "description": "Data final inclusiva do período.",
+            "required": true,
+            "example": "",
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Indicadores do dashboard.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Dashboard"
+                }
+              }
+            },
+            "headers": {}
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest",
+            "description": "Requisição malformada ou parâmetros incompatíveis."
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized",
+            "description": "Autenticação ausente, inválida ou expirada."
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden",
+            "description": "Usuário autenticado sem permissão para a operação."
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/v1/dashboard/exportacao": {
+      "get": {
+        "summary": "Exportar dashboard em CSV",
+        "deprecated": false,
+        "description": "UC19. Exporta os indicadores e dados tabulares do dashboard em CSV UTF-8. Restrito ao perfil ADMINISTRADOR. A exportação respeita o período e as regras de inclusão de pedidos ativos.",
+        "operationId": "exportarDashboardCsv",
+        "tags": [
+          "Dashboard"
+        ],
+        "parameters": [
+          {
+            "name": "dataInicio",
+            "in": "query",
+            "description": "Data inicial inclusiva.",
+            "required": true,
+            "example": "",
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          },
+          {
+            "name": "dataFim",
+            "in": "query",
+            "description": "Data final inclusiva.",
+            "required": true,
+            "example": "",
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Arquivo CSV gerado.",
+            "content": {
+              "text/csv": {
+                "schema": {
+                  "$ref": "#/components/schemas/CsvFile"
+                }
+              }
+            },
+            "headers": {
+              "Content-Disposition": {
+                "required": false,
+                "description": "Nome sugerido do arquivo exportado.",
+                "schema": {
+                  "type": "string",
+                  "example": "mente-fria-dashboard-2026-10.csv"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest",
+            "description": "Requisição malformada ou parâmetros incompatíveis."
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized",
+            "description": "Autenticação ausente, inválida ou expirada."
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden",
+            "description": "Usuário autenticado sem permissão para a operação."
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "ApiErrorDetail": {
+        "type": "object",
+        "description": "Detalhe de validação associado a um campo da requisição.",
+        "properties": {
+          "campo": {
+            "type": "string",
+            "description": "Nome do campo que apresentou problema.",
+            "maxLength": 100,
+            "example": "precoVenda"
+          },
+          "mensagem": {
+            "type": "string",
+            "description": "Explicação objetiva da falha de validação.",
+            "maxLength": 500,
+            "example": "Deve ser maior que zero."
+          },
+          "valorRejeitado": {
+            "type": "string",
+            "description": "Representação textual do valor inválido, quando seguro e útil para diagnóstico.",
+            "maxLength": 500,
+            "nullable": true,
+            "example": "0.00"
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "campo",
+          "mensagem"
+        ],
+        "example": {
+          "campo": "precoVenda",
+          "mensagem": "Deve ser maior que zero.",
+          "valorRejeitado": "0.00"
+        }
+      },
+      "ApiError": {
+        "type": "object",
+        "description": "Formato uniforme para erros da API. Não deve expor stack trace, SQL, hash de senha ou dados internos.",
+        "properties": {
+          "codigo": {
+            "type": "string",
+            "description": "Código estável e legível por máquina para classificar o erro.",
+            "maxLength": 80,
+            "example": "VALIDATION_ERROR"
+          },
+          "mensagem": {
+            "type": "string",
+            "description": "Mensagem resumida e adequada ao consumidor da API.",
+            "maxLength": 500,
+            "example": "A requisição contém dados inválidos."
+          },
+          "detalhes": {
+            "type": "array",
+            "description": "Lista de erros de validação específicos; pode ser vazia.",
+            "items": {
+              "$ref": "#/components/schemas/ApiErrorDetail"
+            },
+            "example": [
+              {
+                "campo": "precoVenda",
+                "mensagem": "Deve ser maior que zero.",
+                "valorRejeitado": "0.00"
+              }
+            ]
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Instante em que o erro foi produzido, em ISO 8601.",
+            "example": "2026-10-30T16:30:00-03:00"
+          },
+          "caminho": {
+            "type": "string",
+            "description": "Caminho da requisição que originou o erro.",
+            "maxLength": 300,
+            "example": "/api/v1/produtos"
+          },
+          "correlationId": {
+            "type": "string",
+            "description": "Identificador de correlação para rastreamento nos logs.",
+            "maxLength": 100,
+            "nullable": true,
+            "example": "7c8b4fb3-9da1-4baf-9f7d-3f2f0b7a0d2a"
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "codigo",
+          "mensagem",
+          "detalhes",
+          "timestamp",
+          "caminho"
+        ],
+        "example": {
+          "codigo": "VALIDATION_ERROR",
+          "mensagem": "A requisição contém dados inválidos.",
+          "detalhes": [
+            {
+              "campo": "precoVenda",
+              "mensagem": "Deve ser maior que zero.",
+              "valorRejeitado": "0.00"
+            }
+          ],
+          "timestamp": "2026-10-30T16:30:00-03:00",
+          "caminho": "/api/v1/produtos",
+          "correlationId": "7c8b4fb3-9da1-4baf-9f7d-3f2f0b7a0d2a"
+        }
+      },
+      "PageMetadata": {
+        "type": "object",
+        "description": "Metadados da paginação. page é baseado em zero.",
+        "properties": {
+          "page": {
+            "type": "integer",
+            "description": "Índice da página retornada, começando em zero.",
+            "minimum": 0,
+            "example": 0
+          },
+          "size": {
+            "type": "integer",
+            "description": "Quantidade máxima de itens por página.",
+            "minimum": 1,
+            "maximum": 100,
+            "example": 20
+          },
+          "totalElements": {
+            "type": "integer",
+            "description": "Quantidade total de registros compatíveis com os filtros.",
+            "minimum": 0,
+            "example": 42
+          },
+          "totalPages": {
+            "type": "integer",
+            "description": "Quantidade total de páginas.",
+            "minimum": 0,
+            "example": 3
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "page",
+          "size",
+          "totalElements",
+          "totalPages"
+        ],
+        "example": {
+          "page": 0,
+          "size": 20,
+          "totalElements": 42,
+          "totalPages": 3
+        }
+      },
+      "CreateAdminDTO": {
+        "type": "object",
+        "description": "Dados para criar a primeira conta Administrador. A operação deve ser recusada se já existir um Administrador inicial.",
+        "properties": {
+          "nome": {
+            "type": "string",
+            "description": "Nome de exibição do Administrador.",
+            "minLength": 2,
+            "maxLength": 150,
+            "example": "Mariana Oliveira"
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "description": "E-mail único utilizado no login.",
+            "maxLength": 150,
+            "example": "mariana.oliveira@exemplo.com"
+          },
+          "senha": {
+            "type": "string",
+            "description": "Senha em texto claro enviada somente por HTTPS; o backend deve armazenar apenas hash seguro. Mínimo de 8 caracteres.",
+            "minLength": 8,
+            "maxLength": 128,
+            "example": "SenhaForte#2026"
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "nome",
+          "email",
+          "senha"
+        ],
+        "example": {
+          "nome": "Mariana Oliveira",
+          "email": "mariana.oliveira@exemplo.com",
+          "senha": "SenhaForte#2026"
+        }
+      },
+      "CreateFuncionarioDTO": {
+        "type": "object",
+        "description": "Dados para cadastrar um Funcionário. O perfil é definido pelo servidor como FUNCIONARIO.",
+        "properties": {
+          "nome": {
+            "type": "string",
+            "description": "Nome de exibição do funcionário.",
+            "minLength": 2,
+            "maxLength": 150,
+            "example": "Rafael Santos"
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "description": "E-mail único utilizado no login.",
+            "maxLength": 150,
+            "example": "rafael.santos@exemplo.com"
+          },
+          "senha": {
+            "type": "string",
+            "description": "Senha inicial enviada somente por HTTPS; armazenar apenas hash seguro.",
+            "minLength": 8,
+            "maxLength": 128,
+            "example": "AcessoInicial#2026"
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "nome",
+          "email",
+          "senha"
+        ],
+        "example": {
+          "nome": "Rafael Santos",
+          "email": "rafael.santos@exemplo.com",
+          "senha": "AcessoInicial#2026"
+        }
+      },
+      "UpdateUsuarioDTO": {
+        "type": "object",
+        "description": "Atualização parcial dos dados editáveis do usuário. O perfil não pode ser alterado por esta operação.",
+        "properties": {
+          "nome": {
+            "type": "string",
+            "description": "Novo nome de exibição.",
+            "minLength": 2,
+            "maxLength": 150,
+            "example": "Rafael Santos"
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "description": "Novo e-mail único de login.",
+            "maxLength": 150,
+            "example": "rafael.novo@exemplo.com"
+          },
+          "ativo": {
+            "type": "boolean",
+            "description": "Indica se o usuário pode autenticar e utilizar o sistema.",
+            "example": true
+          }
+        },
+        "additionalProperties": false,
+        "example": {
+          "nome": "Rafael Santos",
+          "email": "rafael.novo@exemplo.com",
+          "ativo": true
+        }
+      },
+      "Usuario": {
+        "type": "object",
+        "description": "Representação pública do usuário. senha e senha_hash nunca são retornados.",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int32",
+            "description": "Identificador único do usuário.",
+            "minimum": 1,
+            "example": 12
+          },
+          "nome": {
+            "type": "string",
+            "description": "Nome de exibição.",
+            "maxLength": 150,
+            "example": "Rafael Santos"
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "description": "E-mail de login, único no sistema.",
+            "maxLength": 150,
+            "example": "rafael.santos@exemplo.com"
+          },
+          "perfil": {
+            "type": "string",
+            "description": "Papel de autorização do usuário.",
+            "enum": [
+              "ADMINISTRADOR",
+              "FUNCIONARIO"
+            ],
+            "example": "FUNCIONARIO"
+          },
+          "ativo": {
+            "type": "boolean",
+            "description": "Indica se a conta está ativa.",
+            "example": true
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "nome",
+          "email",
+          "perfil",
+          "ativo"
+        ],
+        "example": {
+          "id": 12,
+          "nome": "Rafael Santos",
+          "email": "rafael.santos@exemplo.com",
+          "perfil": "FUNCIONARIO",
+          "ativo": true
+        }
+      },
+      "LoginDTO": {
+        "type": "object",
+        "description": "Credenciais para autenticação. A API nunca deve registrar a senha em logs.",
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email",
+            "description": "E-mail cadastrado.",
+            "maxLength": 150,
+            "example": "rafael.santos@exemplo.com"
+          },
+          "senha": {
+            "type": "string",
+            "description": "Senha em texto claro recebida por HTTPS.",
+            "minLength": 8,
+            "maxLength": 128,
+            "example": "AcessoInicial#2026"
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "email",
+          "senha"
+        ],
+        "example": {
+          "email": "rafael.santos@exemplo.com",
+          "senha": "AcessoInicial#2026"
+        }
+      },
+      "AuthToken": {
+        "type": "object",
+        "description": "Resultado da autenticação. O token é enviado no cabeçalho Authorization como Bearer.",
+        "properties": {
+          "accessToken": {
+            "type": "string",
+            "description": "Token de acesso assinado.",
+            "example": "eyJhbGciOiJIUzI1NiJ9.mock.signature"
+          },
+          "tokenType": {
+            "type": "string",
+            "description": "Esquema de autenticação utilizado.",
+            "enum": [
+              "Bearer"
+            ],
+            "default": "Bearer",
+            "example": "Bearer"
+          },
+          "expiresInSeconds": {
+            "type": "integer",
+            "description": "Tempo de validade do token em segundos.",
+            "minimum": 1,
+            "example": 3600
+          },
+          "usuario": {
+            "$ref": "#/components/schemas/Usuario",
+            "description": "Dados públicos do usuário autenticado."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "accessToken",
+          "tokenType",
+          "expiresInSeconds",
+          "usuario"
+        ],
+        "example": {
+          "accessToken": "eyJhbGciOiJIUzI1NiJ9.mock.signature",
+          "tokenType": "Bearer",
+          "expiresInSeconds": 3600,
+          "usuario": {
+            "id": 12,
+            "nome": "Rafael Santos",
+            "email": "rafael.santos@exemplo.com",
+            "perfil": "FUNCIONARIO",
+            "ativo": true
+          }
+        }
+      },
+      "CreateClienteDTO": {
+        "type": "object",
+        "description": "Dados necessários para cadastrar um cliente.",
+        "properties": {
+          "nome": {
+            "type": "string",
+            "description": "Nome do cliente.",
+            "minLength": 2,
+            "maxLength": 150,
+            "example": "Ana Clara Souza"
+          },
+          "contato": {
+            "type": "string",
+            "description": "Telefone ou outro meio de contato informado pelo cliente.",
+            "minLength": 3,
+            "maxLength": 50,
+            "example": "(16) 99999-1234"
+          },
+          "endereco": {
+            "type": "string",
+            "description": "Endereço do cliente.",
+            "minLength": 3,
+            "maxLength": 255,
+            "example": "Rua das Acácias, 120 - Ribeirão Preto/SP"
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "nome",
+          "contato",
+          "endereco"
+        ],
+        "example": {
+          "nome": "Ana Clara Souza",
+          "contato": "(16) 99999-1234",
+          "endereco": "Rua das Acácias, 120 - Ribeirão Preto/SP"
+        }
+      },
+      "UpdateClienteDTO": {
+        "type": "object",
+        "description": "Substituição dos dados cadastrais do cliente.",
+        "properties": {
+          "nome": {
+            "type": "string",
+            "description": "Nome atualizado.",
+            "minLength": 2,
+            "maxLength": 150,
+            "example": "Ana Clara Souza"
+          },
+          "contato": {
+            "type": "string",
+            "description": "Telefone ou meio de contato atualizado.",
+            "minLength": 3,
+            "maxLength": 50,
+            "example": "(16) 98888-1234"
+          },
+          "endereco": {
+            "type": "string",
+            "description": "Endereço atualizado.",
+            "minLength": 3,
+            "maxLength": 255,
+            "example": "Av. Independência, 500 - Ribeirão Preto/SP"
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "nome",
+          "contato",
+          "endereco"
+        ],
+        "example": {
+          "nome": "Ana Clara Souza",
+          "contato": "(16) 98888-1234",
+          "endereco": "Av. Independência, 500 - Ribeirão Preto/SP"
+        }
+      },
+      "Cliente": {
+        "type": "object",
+        "description": "Representação de cliente cadastrado.",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int32",
+            "description": "Identificador único do cliente.",
+            "minimum": 1,
+            "example": 31
+          },
+          "nome": {
+            "type": "string",
+            "description": "Nome do cliente.",
+            "maxLength": 150,
+            "example": "Ana Clara Souza"
+          },
+          "contato": {
+            "type": "string",
+            "description": "Telefone ou meio de contato.",
+            "maxLength": 50,
+            "example": "(16) 99999-1234"
+          },
+          "endereco": {
+            "type": "string",
+            "description": "Endereço cadastrado.",
+            "maxLength": 255,
+            "example": "Rua das Acácias, 120 - Ribeirão Preto/SP"
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "nome",
+          "contato",
+          "endereco"
+        ],
+        "example": {
+          "id": 31,
+          "nome": "Ana Clara Souza",
+          "contato": "(16) 99999-1234",
+          "endereco": "Rua das Acácias, 120 - Ribeirão Preto/SP"
+        }
+      },
+      "UnidadeMedida": {
+        "type": "object",
+        "description": "Porção padrão sugerida para novos ingredientes da unidade correspondente.",
+        "properties": {
+          "unidadeMedida": {
+            "type": "string",
+            "description": "Código textual da unidade, utilizado também como chave primária.",
+            "minLength": 1,
+            "maxLength": 20,
+            "pattern": "^[a-zA-Z][a-zA-Z0-9_-]{0,19}$",
+            "example": "kg"
+          },
+          "porcaoPadrao": {
+            "type": "number",
+            "description": "Valor sugerido no cadastro de novos ingredientes. Deve ser maior que zero; não altera ingredientes existentes.",
+            "minimum": 0.001,
+            "maximum": 9999999.999,
+            "multipleOf": 0.001,
+            "example": 0.04
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "unidadeMedida",
+          "porcaoPadrao"
+        ],
+        "example": {
+          "unidadeMedida": "kg",
+          "porcaoPadrao": 0.04
+        }
+      },
+      "CreateUnidadeMedidaDTO": {
+        "type": "object",
+        "description": "Dados para definir uma unidade e sua sugestão de porção padrão.",
+        "properties": {
+          "unidadeMedida": {
+            "type": "string",
+            "description": "Código único da unidade de medida.",
+            "minLength": 1,
+            "maxLength": 20,
+            "pattern": "^[a-zA-Z][a-zA-Z0-9_-]{0,19}$",
+            "example": "kg"
+          },
+          "porcaoPadrao": {
+            "type": "number",
+            "description": "Sugestão de porção para novos ingredientes dessa unidade.",
+            "minimum": 0.001,
+            "maximum": 9999999.999,
+            "multipleOf": 0.001,
+            "example": 0.04
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "unidadeMedida",
+          "porcaoPadrao"
+        ],
+        "example": {
+          "unidadeMedida": "kg",
+          "porcaoPadrao": 0.04
+        }
+      },
+      "UpdateUnidadeMedidaDTO": {
+        "type": "object",
+        "description": "Atualiza a sugestão de porção padrão de uma unidade. Não altera porções de ingredientes já cadastrados.",
+        "properties": {
+          "porcaoPadrao": {
+            "type": "number",
+            "description": "Novo valor sugerido para novos ingredientes.",
+            "minimum": 0.001,
+            "maximum": 9999999.999,
+            "multipleOf": 0.001,
+            "example": 0.05
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "porcaoPadrao"
+        ],
+        "example": {
+          "porcaoPadrao": 0.05
+        }
+      },
+      "CreateIngredienteDTO": {
+        "type": "object",
+        "description": "Cadastro de ingrediente. O saldo de estoque não é informado aqui: deve ser criado por movimentação ENTRADA.",
+        "properties": {
+          "nome": {
+            "type": "string",
+            "description": "Nome do ingrediente ou insumo.",
+            "minLength": 2,
+            "maxLength": 100,
+            "example": "Açaí (polpa)"
+          },
+          "unidadeMedida": {
+            "type": "string",
+            "description": "Unidade previamente cadastrada em unidade_medida_porcao_padrao.",
+            "minLength": 1,
+            "maxLength": 20,
+            "example": "kg"
+          },
+          "custoUnitario": {
+            "type": "number",
+            "description": "Custo por unidade de medida, em reais. Aceita zero ou valor positivo.",
+            "minimum": 0,
+            "maximum": 99999999.99,
+            "multipleOf": 0.01,
+            "example": 18.5
+          },
+          "porcaoPadrao": {
+            "type": "number",
+            "description": "Porção efetiva deste ingrediente usada nos cálculos e composição. Deve ser maior que zero.",
+            "minimum": 0.001,
+            "maximum": 9999999.999,
+            "multipleOf": 0.001,
+            "example": 0.15
+          },
+          "quantidadeMinima": {
+            "type": "number",
+            "description": "Limite de estoque que dispara alerta de reposição.",
+            "minimum": 0,
+            "maximum": 9999999.999,
+            "default": 0,
+            "multipleOf": 0.001,
+            "example": 10
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "nome",
+          "unidadeMedida",
+          "custoUnitario",
+          "porcaoPadrao"
+        ],
+        "example": {
+          "nome": "Açaí (polpa)",
+          "unidadeMedida": "kg",
+          "custoUnitario": 18.5,
+          "porcaoPadrao": 0.15,
+          "quantidadeMinima": 10
+        }
+      },
+      "UpdateIngredienteDTO": {
+        "type": "object",
+        "description": "Atualização cadastral de ingrediente. quantidadeEstoque permanece sob controle exclusivo das movimentações.",
+        "properties": {
+          "nome": {
+            "type": "string",
+            "description": "Nome atualizado.",
+            "minLength": 2,
+            "maxLength": 100,
+            "example": "Açaí (polpa)"
+          },
+          "unidadeMedida": {
+            "type": "string",
+            "description": "Unidade cadastrada previamente.",
+            "minLength": 1,
+            "maxLength": 20,
+            "example": "kg"
+          },
+          "custoUnitario": {
+            "type": "number",
+            "description": "Custo por unidade de medida em reais.",
+            "minimum": 0,
+            "maximum": 99999999.99,
+            "multipleOf": 0.01,
+            "example": 19
+          },
+          "porcaoPadrao": {
+            "type": "number",
+            "description": "Porção efetiva individual para cálculos.",
+            "minimum": 0.001,
+            "maximum": 9999999.999,
+            "multipleOf": 0.001,
+            "example": 0.15
+          },
+          "quantidadeMinima": {
+            "type": "number",
+            "description": "Limite de estoque que dispara alerta.",
+            "minimum": 0,
+            "maximum": 9999999.999,
+            "multipleOf": 0.001,
+            "example": 12
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "nome",
+          "unidadeMedida",
+          "custoUnitario",
+          "porcaoPadrao",
+          "quantidadeMinima"
+        ],
+        "example": {
+          "nome": "Açaí (polpa)",
+          "unidadeMedida": "kg",
+          "custoUnitario": 19,
+          "porcaoPadrao": 0.15,
+          "quantidadeMinima": 12
+        }
+      },
+      "Ingrediente": {
+        "type": "object",
+        "description": "Representação completa do ingrediente, incluindo saldo atual calculado pelas entradas ainda disponíveis.",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int32",
+            "description": "Identificador único do ingrediente.",
+            "minimum": 1,
+            "example": 1
+          },
+          "nome": {
+            "type": "string",
+            "description": "Nome do ingrediente.",
+            "maxLength": 100,
+            "example": "Açaí (polpa)"
+          },
+          "unidadeMedida": {
+            "type": "string",
+            "description": "Unidade de medida cadastrada.",
+            "maxLength": 20,
+            "example": "kg"
+          },
+          "custoUnitario": {
+            "type": "number",
+            "description": "Custo por unidade de medida em reais.",
+            "minimum": 0,
+            "maximum": 99999999.99,
+            "multipleOf": 0.01,
+            "example": 18.5
+          },
+          "porcaoPadrao": {
+            "type": "number",
+            "description": "Porção efetiva individual usada nos cálculos.",
+            "minimum": 0.001,
+            "multipleOf": 0.001,
+            "example": 0.15
+          },
+          "quantidadeEstoque": {
+            "type": "number",
+            "description": "Saldo total atual: soma da quantidade restante das entradas do ingrediente.",
+            "minimum": 0,
+            "multipleOf": 0.001,
+            "example": 40
+          },
+          "quantidadeMinima": {
+            "type": "number",
+            "description": "Saldo mínimo que dispara alerta de reposição.",
+            "minimum": 0,
+            "multipleOf": 0.001,
+            "example": 10
+          },
+          "precisaReposicao": {
+            "type": "boolean",
+            "description": "Indica se o saldo válido está abaixo do limite mínimo.",
+            "example": false
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "nome",
+          "unidadeMedida",
+          "custoUnitario",
+          "porcaoPadrao",
+          "quantidadeEstoque",
+          "quantidadeMinima",
+          "precisaReposicao"
+        ],
+        "example": {
+          "id": 1,
+          "nome": "Açaí (polpa)",
+          "unidadeMedida": "kg",
+          "custoUnitario": 18.5,
+          "porcaoPadrao": 0.15,
+          "quantidadeEstoque": 40,
+          "quantidadeMinima": 10,
+          "precisaReposicao": false
+        }
+      },
+      "ComposicaoProdutoItemDTO": {
+        "type": "object",
+        "description": "Ingrediente e quantidade utilizada por unidade do produto.",
+        "properties": {
+          "ingredienteId": {
+            "type": "integer",
+            "format": "int32",
+            "description": "Identificador do ingrediente que compõe o produto.",
+            "minimum": 1,
+            "example": 1
+          },
+          "quantidadeUtilizada": {
+            "type": "number",
+            "description": "Quantidade consumida do ingrediente para produzir uma unidade do produto, na unidade cadastrada.",
+            "minimum": 0.001,
+            "maximum": 9999999.999,
+            "multipleOf": 0.001,
+            "example": 0.3
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "ingredienteId",
+          "quantidadeUtilizada"
+        ],
+        "example": {
+          "ingredienteId": 1,
+          "quantidadeUtilizada": 0.3
+        }
+      },
+      "ComposicaoProdutoItem": {
+        "type": "object",
+        "description": "Item da composição de um produto com dados básicos do ingrediente.",
+        "properties": {
+          "ingredienteId": {
+            "type": "integer",
+            "format": "int32",
+            "description": "Identificador do ingrediente.",
+            "minimum": 1,
+            "example": 1
+          },
+          "nomeIngrediente": {
+            "type": "string",
+            "description": "Nome do ingrediente.",
+            "maxLength": 100,
+            "example": "Açaí (polpa)"
+          },
+          "unidadeMedida": {
+            "type": "string",
+            "description": "Unidade usada na quantidade da composição.",
+            "maxLength": 20,
+            "example": "kg"
+          },
+          "quantidadeUtilizada": {
+            "type": "number",
+            "description": "Quantidade utilizada para uma unidade do produto.",
+            "minimum": 0.001,
+            "multipleOf": 0.001,
+            "example": 0.3
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "ingredienteId",
+          "nomeIngrediente",
+          "unidadeMedida",
+          "quantidadeUtilizada"
+        ],
+        "example": {
+          "ingredienteId": 1,
+          "nomeIngrediente": "Açaí (polpa)",
+          "unidadeMedida": "kg",
+          "quantidadeUtilizada": 0.3
+        }
+      },
+      "CreateProdutoDTO": {
+        "type": "object",
+        "description": "Cadastro de produto e sua composição de ingredientes. A composição deve conter ao menos um item; regras específicas do domínio podem exigir o ingrediente-base açaí.",
+        "properties": {
+          "nome": {
+            "type": "string",
+            "description": "Nome comercial do produto.",
+            "minLength": 2,
+            "maxLength": 100,
+            "example": "Açaí Tradicional 300ml"
+          },
+          "precoVenda": {
+            "type": "number",
+            "description": "Preço atual de venda em reais, maior que zero.",
+            "minimum": 0.01,
+            "maximum": 99999999.99,
+            "multipleOf": 0.01,
+            "example": 12.9
+          },
+          "ativo": {
+            "type": "boolean",
+            "description": "Indica se o produto está disponível para venda.",
+            "default": true,
+            "example": true
+          },
+          "composicao": {
+            "type": "array",
+            "description": "Lista de ingredientes e quantidades que compõem o produto.",
+            "items": {
+              "$ref": "#/components/schemas/ComposicaoProdutoItemDTO"
+            },
+            "minItems": 1,
+            "example": [
+              {
+                "ingredienteId": 1,
+                "quantidadeUtilizada": 0.3
+              },
+              {
+                "ingredienteId": 2,
+                "quantidadeUtilizada": 0.03
+              },
+              {
+                "ingredienteId": 7,
+                "quantidadeUtilizada": 1
+              }
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "nome",
+          "precoVenda",
+          "composicao"
+        ],
+        "example": {
+          "nome": "Açaí Tradicional 300ml",
+          "precoVenda": 12.9,
+          "ativo": true,
+          "composicao": [
+            {
+              "ingredienteId": 1,
+              "quantidadeUtilizada": 0.3
+            },
+            {
+              "ingredienteId": 2,
+              "quantidadeUtilizada": 0.03
+            },
+            {
+              "ingredienteId": 7,
+              "quantidadeUtilizada": 1
+            }
+          ]
+        }
+      },
+      "UpdateProdutoDTO": {
+        "type": "object",
+        "description": "Atualização dos dados comerciais do produto. A composição é atualizada separadamente no recurso /produtos/{id}/composicao.",
+        "properties": {
+          "nome": {
+            "type": "string",
+            "description": "Nome comercial atualizado.",
+            "minLength": 2,
+            "maxLength": 100,
+            "example": "Açaí Tradicional 300ml"
+          },
+          "precoVenda": {
+            "type": "number",
+            "description": "Novo preço de venda em reais, maior que zero.",
+            "minimum": 0.01,
+            "maximum": 99999999.99,
+            "multipleOf": 0.01,
+            "example": 13.9
+          },
+          "ativo": {
+            "type": "boolean",
+            "description": "Indica se o produto está disponível para venda.",
+            "example": true
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "nome",
+          "precoVenda",
+          "ativo"
+        ],
+        "example": {
+          "nome": "Açaí Tradicional 300ml",
+          "precoVenda": 13.9,
+          "ativo": true
+        }
+      },
+      "Produto": {
+        "type": "object",
+        "description": "Produto comercializável e sua composição.",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int32",
+            "description": "Identificador único do produto.",
+            "minimum": 1,
+            "example": 1
+          },
+          "nome": {
+            "type": "string",
+            "description": "Nome comercial do produto.",
+            "maxLength": 100,
+            "example": "Açaí Tradicional 300ml"
+          },
+          "precoVenda": {
+            "type": "number",
+            "description": "Preço de venda vigente em reais.",
+            "minimum": 0.01,
+            "multipleOf": 0.01,
+            "example": 12.9
+          },
+          "ativo": {
+            "type": "boolean",
+            "description": "Indica se o produto está disponível para venda.",
+            "example": true
+          },
+          "composicao": {
+            "type": "array",
+            "description": "Ingredientes e quantidades por unidade do produto.",
+            "items": {
+              "$ref": "#/components/schemas/ComposicaoProdutoItem"
+            },
+            "minItems": 1,
+            "example": [
+              {
+                "ingredienteId": 1,
+                "nomeIngrediente": "Açaí (polpa)",
+                "unidadeMedida": "kg",
+                "quantidadeUtilizada": 0.3
+              }
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "nome",
+          "precoVenda",
+          "ativo",
+          "composicao"
+        ],
+        "example": {
+          "id": 1,
+          "nome": "Açaí Tradicional 300ml",
+          "precoVenda": 12.9,
+          "ativo": true,
+          "composicao": [
+            {
+              "ingredienteId": 1,
+              "nomeIngrediente": "Açaí (polpa)",
+              "unidadeMedida": "kg",
+              "quantidadeUtilizada": 0.3
+            }
+          ]
+        }
+      },
+      "CreateMovimentacaoEstoqueDTO": {
+        "type": "object",
+        "description": "Registro de movimentação manual. PEDIDO é motivo reservado para baixa automática criada no fluxo de pedido; quantidadeRestante é calculada pelo servidor.",
+        "properties": {
+          "ingredienteId": {
+            "type": "integer",
+            "format": "int32",
+            "description": "Ingrediente movimentado.",
+            "minimum": 1,
+            "example": 1
+          },
+          "tipo": {
+            "type": "string",
+            "description": "ENTRADA adiciona uma nova linha de estoque; SAIDA consome saldo disponível.",
+            "enum": [
+              "ENTRADA",
+              "SAIDA"
+            ],
+            "example": "ENTRADA"
+          },
+          "quantidade": {
+            "type": "number",
+            "description": "Quantidade movimentada, maior que zero.",
+            "minimum": 0.001,
+            "maximum": 9999999.999,
+            "multipleOf": 0.001,
+            "example": 15
+          },
+          "observacao": {
+            "type": "string",
+            "description": "Observação opcional sobre a movimentação.",
+            "maxLength": 255,
+            "nullable": true,
+            "example": "Compra semanal de polpa"
+          },
+          "dataValidade": {
+            "type": "string",
+            "format": "date",
+            "description": "Validade da linha de entrada. Obrigatória para ENTRADA conforme regra de negócio; proibida em SAIDA.",
+            "nullable": true,
+            "example": "2026-11-30"
+          },
+          "motivo": {
+            "type": "string",
+            "description": "Obrigatório em SAIDA: CONVENCIONAL ou DESCARTE_VENCIDO. Não enviar em ENTRADA; PEDIDO é reservado ao sistema.",
+            "enum": [
+              "CONVENCIONAL",
+              "DESCARTE_VENCIDO"
+            ],
+            "nullable": true,
+            "example": "CONVENCIONAL"
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "ingredienteId",
+          "tipo",
+          "quantidade"
+        ],
+        "example": {
+          "ingredienteId": 1,
+          "tipo": "ENTRADA",
+          "quantidade": 15,
+          "observacao": "Compra semanal de polpa",
+          "dataValidade": "2026-11-30"
+        }
+      },
+      "MovimentacaoEstoque": {
+        "type": "object",
+        "description": "Registro de entrada ou saída de estoque. As saídas são imutáveis e mantêm trilha de auditoria.",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int32",
+            "description": "Identificador da movimentação.",
+            "minimum": 1,
+            "example": 102
+          },
+          "ingredienteId": {
+            "type": "integer",
+            "format": "int32",
+            "description": "Identificador do ingrediente movimentado.",
+            "minimum": 1,
+            "example": 1
+          },
+          "usuarioId": {
+            "type": "integer",
+            "format": "int32",
+            "description": "Usuário responsável pelo registro.",
+            "minimum": 1,
+            "example": 12
+          },
+          "tipo": {
+            "type": "string",
+            "description": "Tipo da movimentação.",
+            "enum": [
+              "ENTRADA",
+              "SAIDA"
+            ],
+            "example": "ENTRADA"
+          },
+          "quantidade": {
+            "type": "number",
+            "description": "Quantidade movimentada.",
+            "minimum": 0.001,
+            "multipleOf": 0.001,
+            "example": 15
+          },
+          "dataMovimentacao": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Data e hora do registro, conforme horário de São Paulo.",
+            "example": "2026-10-30T15:10:00-03:00"
+          },
+          "observacao": {
+            "type": "string",
+            "description": "Observação opcional.",
+            "maxLength": 255,
+            "nullable": true,
+            "example": "Compra semanal de polpa"
+          },
+          "dataValidade": {
+            "type": "string",
+            "format": "date",
+            "description": "Validade da linha de estoque criada por ENTRADA; nula em SAIDA.",
+            "nullable": true,
+            "example": "2026-11-30"
+          },
+          "quantidadeRestante": {
+            "type": "number",
+            "description": "Saldo ainda disponível desta linha de entrada. Nulo em SAIDA.",
+            "minimum": 0,
+            "multipleOf": 0.001,
+            "nullable": true,
+            "example": 15
+          },
+          "motivo": {
+            "type": "string",
+            "description": "Motivo da saída. PEDIDO indica consumo automático por pedido.",
+            "enum": [
+              "PEDIDO",
+              "CONVENCIONAL",
+              "DESCARTE_VENCIDO"
+            ],
+            "nullable": true
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "ingredienteId",
+          "usuarioId",
+          "tipo",
+          "quantidade",
+          "dataMovimentacao"
+        ],
+        "example": {
+          "id": 102,
+          "ingredienteId": 1,
+          "usuarioId": 12,
+          "tipo": "ENTRADA",
+          "quantidade": 15,
+          "dataMovimentacao": "2026-10-30T15:10:00-03:00",
+          "observacao": "Compra semanal de polpa",
+          "dataValidade": "2026-11-30",
+          "quantidadeRestante": 15,
+          "motivo": null
+        }
+      },
+      "PedidoItemDTO": {
+        "type": "object",
+        "description": "Produto e quantidade solicitada em um pedido. O preço é obtido pelo servidor e gravado como snapshot.",
+        "properties": {
+          "produtoId": {
+            "type": "integer",
+            "format": "int32",
+            "description": "Identificador do produto solicitado.",
+            "minimum": 1,
+            "example": 2
+          },
+          "quantidade": {
+            "type": "integer",
+            "format": "int32",
+            "description": "Quantidade de unidades do produto.",
+            "minimum": 1,
+            "maximum": 10000,
+            "example": 2
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "produtoId",
+          "quantidade"
+        ],
+        "example": {
+          "produtoId": 2,
+          "quantidade": 2
+        }
+      },
+      "CreatePedidoDTO": {
+        "type": "object",
+        "description": "Dados para registrar pedido. usuarioId, preço unitário e valorTotal são definidos pelo backend; clienteId é opcional.",
+        "properties": {
+          "clienteId": {
+            "type": "integer",
+            "format": "int32",
+            "description": "Cliente associado ao pedido. Pode ser omitido para venda sem cadastro de cliente.",
+            "minimum": 1,
+            "nullable": true,
+            "example": 31
+          },
+          "itens": {
+            "type": "array",
+            "description": "Produtos e quantidades do pedido. Deve conter ao menos um item.",
+            "items": {
+              "$ref": "#/components/schemas/PedidoItemDTO"
+            },
+            "minItems": 1,
+            "example": [
+              {
+                "produtoId": 2,
+                "quantidade": 2
+              }
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "itens"
+        ],
+        "example": {
+          "clienteId": 31,
+          "itens": [
+            {
+              "produtoId": 2,
+              "quantidade": 2
+            }
+          ]
+        }
+      },
+      "PedidoItem": {
+        "type": "object",
+        "description": "Item de pedido com preço unitário registrado no momento da venda.",
+        "properties": {
+          "produtoId": {
+            "type": "integer",
+            "format": "int32",
+            "description": "Identificador do produto.",
+            "minimum": 1,
+            "example": 2
+          },
+          "nomeProduto": {
+            "type": "string",
+            "description": "Nome do produto no momento da resposta.",
+            "maxLength": 100,
+            "example": "Açaí Especial 500ml"
+          },
+          "quantidade": {
+            "type": "integer",
+            "format": "int32",
+            "description": "Quantidade vendida.",
+            "minimum": 1,
+            "example": 2
+          },
+          "precoUnitarioRegistrado": {
+            "type": "number",
+            "description": "Preço unitário congelado no momento do pedido.",
+            "minimum": 0.01,
+            "multipleOf": 0.01,
+            "example": 18.9
+          },
+          "subtotal": {
+            "type": "number",
+            "description": "Quantidade multiplicada pelo preço unitário registrado.",
+            "minimum": 0,
+            "multipleOf": 0.01,
+            "example": 37.8
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "produtoId",
+          "nomeProduto",
+          "quantidade",
+          "precoUnitarioRegistrado",
+          "subtotal"
+        ],
+        "example": {
+          "produtoId": 2,
+          "nomeProduto": "Açaí Especial 500ml",
+          "quantidade": 2,
+          "precoUnitarioRegistrado": 18.9,
+          "subtotal": 37.8
+        }
+      },
+      "Pedido": {
+        "type": "object",
+        "description": "Pedido registrado no sistema. Pedido cancelado permanece armazenado para rastreabilidade e não deve ser contabilizado no faturamento.",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int32",
+            "description": "Identificador único do pedido.",
+            "minimum": 1,
+            "example": 501
+          },
+          "clienteId": {
+            "type": "integer",
+            "format": "int32",
+            "description": "Identificador do cliente; nulo em venda sem cliente cadastrado.",
+            "minimum": 1,
+            "nullable": true,
+            "example": 31
+          },
+          "usuarioId": {
+            "type": "integer",
+            "format": "int32",
+            "description": "Identificador do usuário que registrou o pedido.",
+            "minimum": 1,
+            "example": 12
+          },
+          "dataPedido": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Data e hora em que o pedido foi registrado.",
+            "example": "2026-10-30T15:25:00-03:00"
+          },
+          "valorTotal": {
+            "type": "number",
+            "description": "Soma dos subtotais dos itens, calculada pelo backend.",
+            "minimum": 0,
+            "multipleOf": 0.01,
+            "example": 37.8
+          },
+          "status": {
+            "type": "string",
+            "description": "Situação atual do pedido.",
+            "enum": [
+              "ATIVO",
+              "CANCELADO"
+            ],
+            "example": "ATIVO"
+          },
+          "dataCancelamento": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Data e hora do cancelamento; preenchida somente se status=CANCELADO.",
+            "nullable": true
+          },
+          "usuarioCancelamentoId": {
+            "type": "integer",
+            "format": "int32",
+            "description": "Usuário que realizou o cancelamento; preenchido somente se status=CANCELADO.",
+            "minimum": 1,
+            "nullable": true
+          },
+          "itens": {
+            "type": "array",
+            "description": "Itens que compõem o pedido.",
+            "items": {
+              "$ref": "#/components/schemas/PedidoItem"
+            },
+            "minItems": 1,
+            "example": [
+              {
+                "produtoId": 2,
+                "nomeProduto": "Açaí Especial 500ml",
+                "quantidade": 2,
+                "precoUnitarioRegistrado": 18.9,
+                "subtotal": 37.8
+              }
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "usuarioId",
+          "dataPedido",
+          "valorTotal",
+          "status",
+          "itens"
+        ],
+        "example": {
+          "id": 501,
+          "clienteId": 31,
+          "usuarioId": 12,
+          "dataPedido": "2026-10-30T15:25:00-03:00",
+          "valorTotal": 37.8,
+          "status": "ATIVO",
+          "dataCancelamento": null,
+          "usuarioCancelamentoId": null,
+          "itens": [
+            {
+              "produtoId": 2,
+              "nomeProduto": "Açaí Especial 500ml",
+              "quantidade": 2,
+              "precoUnitarioRegistrado": 18.9,
+              "subtotal": 37.8
+            }
+          ]
+        }
+      },
+      "CancelamentoPedidoDTO": {
+        "type": "object",
+        "description": "Informação opcional para auditoria do cancelamento.",
+        "properties": {
+          "observacao": {
+            "type": "string",
+            "description": "Justificativa textual do cancelamento, se informada.",
+            "maxLength": 255,
+            "nullable": true,
+            "example": "Pedido lançado em duplicidade"
+          }
+        },
+        "additionalProperties": false,
+        "example": {
+          "observacao": "Pedido lançado em duplicidade"
+        }
+      },
+      "ProducaoRecomendacaoItem": {
+        "type": "object",
+        "description": "Quantidade recomendada de produção de um produto para o cenário de estoque válido atual.",
+        "properties": {
+          "produtoId": {
+            "type": "integer",
+            "format": "int32",
+            "description": "Produto recomendado.",
+            "minimum": 1,
+            "example": 2
+          },
+          "nomeProduto": {
+            "type": "string",
+            "description": "Nome do produto.",
+            "maxLength": 100,
+            "example": "Açaí Especial 500ml"
+          },
+          "quantidadeRecomendada": {
+            "type": "integer",
+            "format": "int32",
+            "description": "Quantidade inteira ótima de unidades a produzir.",
+            "minimum": 0,
+            "example": 18
+          },
+          "lucroEstimadoUnitario": {
+            "type": "number",
+            "description": "Preço de venda menos custo dos ingredientes por unidade.",
+            "minimum": 0,
+            "multipleOf": 0.01,
+            "example": 8.2
+          },
+          "lucroEstimadoTotal": {
+            "type": "number",
+            "description": "Lucro estimado unitário multiplicado pela quantidade recomendada.",
+            "minimum": 0,
+            "multipleOf": 0.01,
+            "example": 147.6
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "produtoId",
+          "nomeProduto",
+          "quantidadeRecomendada",
+          "lucroEstimadoUnitario",
+          "lucroEstimadoTotal"
+        ],
+        "example": {
+          "produtoId": 2,
+          "nomeProduto": "Açaí Especial 500ml",
+          "quantidadeRecomendada": 18,
+          "lucroEstimadoUnitario": 8.2,
+          "lucroEstimadoTotal": 147.6
+        }
+      },
+      "ProducaoRecomendacao": {
+        "type": "object",
+        "description": "Resultado sob demanda do modelo de Programação Linear Inteira. Não representa histórico persistido.",
+        "properties": {
+          "calculadoEm": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Data e hora do cálculo.",
+            "example": "2026-10-30T15:30:00-03:00"
+          },
+          "criterioOtimizacao": {
+            "type": "string",
+            "description": "Critério da função objetivo aprovado no adendo do projeto.",
+            "enum": [
+              "LUCRO_ESTIMADO"
+            ],
+            "example": "LUCRO_ESTIMADO"
+          },
+          "lucroTotalEstimado": {
+            "type": "number",
+            "description": "Lucro estimado total da solução ótima em reais.",
+            "minimum": 0,
+            "multipleOf": 0.01,
+            "example": 327.6
+          },
+          "itens": {
+            "type": "array",
+            "description": "Quantidade ótima recomendada por produto.",
+            "items": {
+              "$ref": "#/components/schemas/ProducaoRecomendacaoItem"
+            },
+            "minItems": 0,
+            "example": [
+              {
+                "produtoId": 2,
+                "nomeProduto": "Açaí Especial 500ml",
+                "quantidadeRecomendada": 18,
+                "lucroEstimadoUnitario": 8.2,
+                "lucroEstimadoTotal": 147.6
+              }
+            ]
+          },
+          "observacao": {
+            "type": "string",
+            "description": "Nota sobre limites do cálculo e estoque considerado.",
+            "maxLength": 500,
+            "example": "O cálculo considera somente linhas de estoque não vencidas."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "calculadoEm",
+          "criterioOtimizacao",
+          "lucroTotalEstimado",
+          "itens"
+        ],
+        "example": {
+          "calculadoEm": "2026-10-30T15:30:00-03:00",
+          "criterioOtimizacao": "LUCRO_ESTIMADO",
+          "lucroTotalEstimado": 147.6,
+          "itens": [
+            {
+              "produtoId": 2,
+              "nomeProduto": "Açaí Especial 500ml",
+              "quantidadeRecomendada": 18,
+              "lucroEstimadoUnitario": 8.2,
+              "lucroEstimadoTotal": 147.6
+            }
+          ],
+          "observacao": "O cálculo considera somente linhas de estoque não vencidas."
+        }
+      },
+      "CreateReposicaoDTO": {
+        "type": "object",
+        "description": "Parâmetros para cálculo de reposição de ingredientes com horizonte e orçamento disponíveis.",
+        "properties": {
+          "periodoDias": {
+            "type": "integer",
+            "format": "int32",
+            "description": "Horizonte de consumo em dias utilizado na estimativa.",
+            "minimum": 1,
+            "maximum": 365,
+            "example": 30
+          },
+          "orcamento": {
+            "type": "number",
+            "description": "Orçamento máximo disponível em reais.",
+            "minimum": 0,
+            "maximum": 99999999.99,
+            "multipleOf": 0.01,
+            "example": 500
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "periodoDias",
+          "orcamento"
+        ],
+        "example": {
+          "periodoDias": 30,
+          "orcamento": 500
+        }
+      },
+      "ReposicaoRecomendacaoItem": {
+        "type": "object",
+        "description": "Quantidade de compra sugerida para um ingrediente.",
+        "properties": {
+          "ingredienteId": {
+            "type": "integer",
+            "format": "int32",
+            "description": "Identificador do ingrediente.",
+            "minimum": 1,
+            "example": 4
+          },
+          "nomeIngrediente": {
+            "type": "string",
+            "description": "Nome do ingrediente.",
+            "maxLength": 100,
+            "example": "Banana"
+          },
+          "quantidadeRecomendada": {
+            "type": "number",
+            "description": "Quantidade sugerida para compra, na unidade do ingrediente.",
+            "minimum": 0,
+            "multipleOf": 0.001,
+            "example": 8.5
+          },
+          "unidadeMedida": {
+            "type": "string",
+            "description": "Unidade em que a quantidade é expressa.",
+            "maxLength": 20,
+            "example": "kg"
+          },
+          "custoEstimado": {
+            "type": "number",
+            "description": "Custo estimado da compra em reais.",
+            "minimum": 0,
+            "multipleOf": 0.01,
+            "example": 46.75
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "ingredienteId",
+          "nomeIngrediente",
+          "quantidadeRecomendada",
+          "unidadeMedida",
+          "custoEstimado"
+        ],
+        "example": {
+          "ingredienteId": 4,
+          "nomeIngrediente": "Banana",
+          "quantidadeRecomendada": 8.5,
+          "unidadeMedida": "kg",
+          "custoEstimado": 46.75
+        }
+      },
+      "ReposicaoRecomendacao": {
+        "type": "object",
+        "description": "Resultado sob demanda da otimização de reposição, respeitando o orçamento e o período informados.",
+        "properties": {
+          "calculadoEm": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Data e hora do cálculo.",
+            "example": "2026-10-30T15:35:00-03:00"
+          },
+          "periodoDias": {
+            "type": "integer",
+            "description": "Horizonte de consumo utilizado.",
+            "minimum": 1,
+            "maximum": 365,
+            "example": 30
+          },
+          "orcamento": {
+            "type": "number",
+            "description": "Orçamento máximo informado em reais.",
+            "minimum": 0,
+            "multipleOf": 0.01,
+            "example": 500
+          },
+          "custoTotalEstimado": {
+            "type": "number",
+            "description": "Soma dos custos estimados da recomendação.",
+            "minimum": 0,
+            "multipleOf": 0.01,
+            "example": 346.75
+          },
+          "itens": {
+            "type": "array",
+            "description": "Ingredientes e quantidades recomendadas.",
+            "items": {
+              "$ref": "#/components/schemas/ReposicaoRecomendacaoItem"
+            },
+            "minItems": 0,
+            "example": [
+              {
+                "ingredienteId": 4,
+                "nomeIngrediente": "Banana",
+                "quantidadeRecomendada": 8.5,
+                "unidadeMedida": "kg",
+                "custoEstimado": 46.75
+              }
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "calculadoEm",
+          "periodoDias",
+          "orcamento",
+          "custoTotalEstimado",
+          "itens"
+        ],
+        "example": {
+          "calculadoEm": "2026-10-30T15:35:00-03:00",
+          "periodoDias": 30,
+          "orcamento": 500,
+          "custoTotalEstimado": 46.75,
+          "itens": [
+            {
+              "ingredienteId": 4,
+              "nomeIngrediente": "Banana",
+              "quantidadeRecomendada": 8.5,
+              "unidadeMedida": "kg",
+              "custoEstimado": 46.75
+            }
+          ]
+        }
+      },
+      "AlertaReposicao": {
+        "type": "object",
+        "description": "Ingrediente cujo saldo válido atingiu o limite mínimo configurado.",
+        "properties": {
+          "ingredienteId": {
+            "type": "integer",
+            "format": "int32",
+            "description": "Identificador do ingrediente.",
+            "minimum": 1,
+            "example": 4
+          },
+          "nomeIngrediente": {
+            "type": "string",
+            "description": "Nome do ingrediente.",
+            "maxLength": 100,
+            "example": "Banana"
+          },
+          "quantidadeEstoqueValido": {
+            "type": "number",
+            "description": "Saldo não vencido disponível para consumo.",
+            "minimum": 0,
+            "multipleOf": 0.001,
+            "example": 2
+          },
+          "quantidadeMinima": {
+            "type": "number",
+            "description": "Limite mínimo configurado.",
+            "minimum": 0,
+            "multipleOf": 0.001,
+            "example": 3
+          },
+          "unidadeMedida": {
+            "type": "string",
+            "description": "Unidade de medida do ingrediente.",
+            "maxLength": 20,
+            "example": "kg"
+          },
+          "deficit": {
+            "type": "number",
+            "description": "Diferença positiva entre o mínimo e o saldo válido.",
+            "minimum": 0,
+            "multipleOf": 0.001,
+            "example": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "ingredienteId",
+          "nomeIngrediente",
+          "quantidadeEstoqueValido",
+          "quantidadeMinima",
+          "unidadeMedida",
+          "deficit"
+        ],
+        "example": {
+          "ingredienteId": 4,
+          "nomeIngrediente": "Banana",
+          "quantidadeEstoqueValido": 2,
+          "quantidadeMinima": 3,
+          "unidadeMedida": "kg",
+          "deficit": 1
+        }
+      },
+      "AlertaValidade": {
+        "type": "object",
+        "description": "Linha de entrada de estoque próxima do vencimento ou já vencida.",
+        "properties": {
+          "movimentacaoId": {
+            "type": "integer",
+            "format": "int32",
+            "description": "Identificador da movimentação de entrada que criou a linha.",
+            "minimum": 1,
+            "example": 102
+          },
+          "ingredienteId": {
+            "type": "integer",
+            "format": "int32",
+            "description": "Identificador do ingrediente.",
+            "minimum": 1,
+            "example": 1
+          },
+          "nomeIngrediente": {
+            "type": "string",
+            "description": "Nome do ingrediente.",
+            "maxLength": 100,
+            "example": "Açaí (polpa)"
+          },
+          "dataValidade": {
+            "type": "string",
+            "format": "date",
+            "description": "Data de validade da linha de estoque.",
+            "example": "2026-11-02"
+          },
+          "quantidadeRestante": {
+            "type": "number",
+            "description": "Quantidade ainda disponível nesta linha.",
+            "minimum": 0,
+            "multipleOf": 0.001,
+            "example": 5
+          },
+          "diasAteVencimento": {
+            "type": "integer",
+            "description": "Dias até a validade; valores negativos indicam vencimento passado.",
+            "example": 3
+          },
+          "situacao": {
+            "type": "string",
+            "description": "Classificação temporal da linha.",
+            "enum": [
+              "PROXIMO_VENCIMENTO",
+              "VENCIDO"
+            ],
+            "example": "PROXIMO_VENCIMENTO"
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "movimentacaoId",
+          "ingredienteId",
+          "nomeIngrediente",
+          "dataValidade",
+          "quantidadeRestante",
+          "diasAteVencimento",
+          "situacao"
+        ],
+        "example": {
+          "movimentacaoId": 102,
+          "ingredienteId": 1,
+          "nomeIngrediente": "Açaí (polpa)",
+          "dataValidade": "2026-11-02",
+          "quantidadeRestante": 5,
+          "diasAteVencimento": 3,
+          "situacao": "PROXIMO_VENCIMENTO"
+        }
+      },
+      "SugestaoMarketing": {
+        "type": "object",
+        "description": "Sugestão de marketing gerada sob demanda a partir dos dados comerciais disponíveis.",
+        "properties": {
+          "geradoEm": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Data e hora da geração.",
+            "example": "2026-10-30T15:40:00-03:00"
+          },
+          "sugestoes": {
+            "type": "array",
+            "description": "Lista de textos sugeridos. As sugestões não são publicadas automaticamente.",
+            "items": {
+              "type": "string",
+              "maxLength": 1000
+            },
+            "minItems": 0,
+            "example": [
+              "Divulgar o Açaí Especial 500ml como opção de maior margem."
+            ]
+          },
+          "observacao": {
+            "type": "string",
+            "description": "Limitações ou contexto usado na geração.",
+            "maxLength": 500,
+            "nullable": true,
+            "example": "Sugestões baseadas nos produtos cadastrados e indicadores disponíveis."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "geradoEm",
+          "sugestoes"
+        ],
+        "example": {
+          "geradoEm": "2026-10-30T15:40:00-03:00",
+          "sugestoes": [
+            "Divulgar o Açaí Especial 500ml como opção de maior margem."
+          ],
+          "observacao": "Sugestões baseadas nos produtos cadastrados e indicadores disponíveis."
+        }
+      },
+      "Dashboard": {
+        "type": "object",
+        "description": "Indicadores consolidados para acompanhamento gerencial.",
+        "properties": {
+          "periodoInicio": {
+            "type": "string",
+            "format": "date",
+            "description": "Início do intervalo consultado.",
+            "example": "2026-10-01"
+          },
+          "periodoFim": {
+            "type": "string",
+            "format": "date",
+            "description": "Fim do intervalo consultado.",
+            "example": "2026-10-30"
+          },
+          "quantidadePedidos": {
+            "type": "integer",
+            "description": "Quantidade de pedidos ATIVOS no período.",
+            "minimum": 0,
+            "example": 128
+          },
+          "faturamentoTotal": {
+            "type": "number",
+            "description": "Soma do valor dos pedidos ATIVOS no período, em reais.",
+            "minimum": 0,
+            "multipleOf": 0.01,
+            "example": 2450.7
+          },
+          "ticketMedio": {
+            "type": "number",
+            "description": "Faturamento dividido pela quantidade de pedidos, em reais; zero quando não houver pedidos.",
+            "minimum": 0,
+            "multipleOf": 0.01,
+            "example": 19.14
+          },
+          "produtosMaisVendidos": {
+            "type": "array",
+            "description": "Ranking resumido de produtos por quantidade vendida.",
+            "items": {
+              "$ref": "#/components/schemas/ProdutoMaisVendido"
+            },
+            "minItems": 0,
+            "example": [
+              {
+                "produtoId": 2,
+                "nomeProduto": "Açaí Especial 500ml",
+                "quantidadeVendida": 45
+              }
+            ]
+          },
+          "ingredientesEmReposicao": {
+            "type": "integer",
+            "description": "Quantidade de ingredientes abaixo do limite mínimo.",
+            "minimum": 0,
+            "example": 2
+          },
+          "linhasProximasVencimento": {
+            "type": "integer",
+            "description": "Quantidade de linhas de entrada próximas do vencimento.",
+            "minimum": 0,
+            "example": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "periodoInicio",
+          "periodoFim",
+          "quantidadePedidos",
+          "faturamentoTotal",
+          "ticketMedio",
+          "produtosMaisVendidos",
+          "ingredientesEmReposicao",
+          "linhasProximasVencimento"
+        ],
+        "example": {
+          "periodoInicio": "2026-10-01",
+          "periodoFim": "2026-10-30",
+          "quantidadePedidos": 128,
+          "faturamentoTotal": 2450.7,
+          "ticketMedio": 19.14,
+          "produtosMaisVendidos": [
+            {
+              "produtoId": 2,
+              "nomeProduto": "Açaí Especial 500ml",
+              "quantidadeVendida": 45
+            }
+          ],
+          "ingredientesEmReposicao": 2,
+          "linhasProximasVencimento": 1
+        }
+      },
+      "ProdutoMaisVendido": {
+        "type": "object",
+        "description": "Resumo de quantidade vendida por produto.",
+        "properties": {
+          "produtoId": {
+            "type": "integer",
+            "format": "int32",
+            "description": "Identificador do produto.",
+            "minimum": 1,
+            "example": 2
+          },
+          "nomeProduto": {
+            "type": "string",
+            "description": "Nome do produto.",
+            "maxLength": 100,
+            "example": "Açaí Especial 500ml"
+          },
+          "quantidadeVendida": {
+            "type": "integer",
+            "description": "Unidades vendidas em pedidos ATIVOS do período.",
+            "minimum": 0,
+            "example": 45
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "produtoId",
+          "nomeProduto",
+          "quantidadeVendida"
+        ],
+        "example": {
+          "produtoId": 2,
+          "nomeProduto": "Açaí Especial 500ml",
+          "quantidadeVendida": 45
+        }
+      },
+      "HealthStatus": {
+        "type": "object",
+        "description": "Estado operacional básico da API e da conexão com o banco.",
+        "properties": {
+          "status": {
+            "type": "string",
+            "description": "Estado geral da aplicação.",
+            "enum": [
+              "ok",
+              "degradado"
+            ],
+            "example": "ok"
+          },
+          "banco": {
+            "type": "string",
+            "description": "Estado da conexão com banco de dados.",
+            "enum": [
+              "ok",
+              "indisponivel"
+            ],
+            "example": "ok"
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "status",
+          "banco"
+        ],
+        "example": {
+          "status": "ok",
+          "banco": "ok"
+        }
+      },
+      "PaginatedUsuarios": {
+        "type": "object",
+        "description": "Lista paginada de usuarios.",
+        "properties": {
+          "data": {
+            "type": "array",
+            "description": "Itens da página atual.",
+            "items": {
+              "$ref": "#/components/schemas/Usuario"
+            },
+            "example": []
+          },
+          "paginacao": {
+            "$ref": "#/components/schemas/PageMetadata",
+            "description": "Metadados de paginação."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "data",
+          "paginacao"
+        ],
+        "example": {
+          "data": [],
+          "paginacao": {
+            "page": 0,
+            "size": 20,
+            "totalElements": 0,
+            "totalPages": 0
+          }
+        }
+      },
+      "PaginatedClientes": {
+        "type": "object",
+        "description": "Lista paginada de clientes.",
+        "properties": {
+          "data": {
+            "type": "array",
+            "description": "Itens da página atual.",
+            "items": {
+              "$ref": "#/components/schemas/Cliente"
+            },
+            "example": []
+          },
+          "paginacao": {
+            "$ref": "#/components/schemas/PageMetadata",
+            "description": "Metadados de paginação."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "data",
+          "paginacao"
+        ],
+        "example": {
+          "data": [],
+          "paginacao": {
+            "page": 0,
+            "size": 20,
+            "totalElements": 0,
+            "totalPages": 0
+          }
+        }
+      },
+      "PaginatedUnidadesMedida": {
+        "type": "object",
+        "description": "Lista paginada de unidadesmedida.",
+        "properties": {
+          "data": {
+            "type": "array",
+            "description": "Itens da página atual.",
+            "items": {
+              "$ref": "#/components/schemas/UnidadeMedida"
+            },
+            "example": []
+          },
+          "paginacao": {
+            "$ref": "#/components/schemas/PageMetadata",
+            "description": "Metadados de paginação."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "data",
+          "paginacao"
+        ],
+        "example": {
+          "data": [],
+          "paginacao": {
+            "page": 0,
+            "size": 20,
+            "totalElements": 0,
+            "totalPages": 0
+          }
+        }
+      },
+      "PaginatedIngredientes": {
+        "type": "object",
+        "description": "Lista paginada de ingredientes.",
+        "properties": {
+          "data": {
+            "type": "array",
+            "description": "Itens da página atual.",
+            "items": {
+              "$ref": "#/components/schemas/Ingrediente"
+            },
+            "example": []
+          },
+          "paginacao": {
+            "$ref": "#/components/schemas/PageMetadata",
+            "description": "Metadados de paginação."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "data",
+          "paginacao"
+        ],
+        "example": {
+          "data": [],
+          "paginacao": {
+            "page": 0,
+            "size": 20,
+            "totalElements": 0,
+            "totalPages": 0
+          }
+        }
+      },
+      "PaginatedProdutos": {
+        "type": "object",
+        "description": "Lista paginada de produtos.",
+        "properties": {
+          "data": {
+            "type": "array",
+            "description": "Itens da página atual.",
+            "items": {
+              "$ref": "#/components/schemas/Produto"
+            },
+            "example": []
+          },
+          "paginacao": {
+            "$ref": "#/components/schemas/PageMetadata",
+            "description": "Metadados de paginação."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "data",
+          "paginacao"
+        ],
+        "example": {
+          "data": [],
+          "paginacao": {
+            "page": 0,
+            "size": 20,
+            "totalElements": 0,
+            "totalPages": 0
+          }
+        }
+      },
+      "PaginatedMovimentacoesEstoque": {
+        "type": "object",
+        "description": "Lista paginada de movimentacoesestoque.",
+        "properties": {
+          "data": {
+            "type": "array",
+            "description": "Itens da página atual.",
+            "items": {
+              "$ref": "#/components/schemas/MovimentacaoEstoque"
+            },
+            "example": []
+          },
+          "paginacao": {
+            "$ref": "#/components/schemas/PageMetadata",
+            "description": "Metadados de paginação."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "data",
+          "paginacao"
+        ],
+        "example": {
+          "data": [],
+          "paginacao": {
+            "page": 0,
+            "size": 20,
+            "totalElements": 0,
+            "totalPages": 0
+          }
+        }
+      },
+      "PaginatedPedidos": {
+        "type": "object",
+        "description": "Lista paginada de pedidos.",
+        "properties": {
+          "data": {
+            "type": "array",
+            "description": "Itens da página atual.",
+            "items": {
+              "$ref": "#/components/schemas/Pedido"
+            },
+            "example": []
+          },
+          "paginacao": {
+            "$ref": "#/components/schemas/PageMetadata",
+            "description": "Metadados de paginação."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "data",
+          "paginacao"
+        ],
+        "example": {
+          "data": [],
+          "paginacao": {
+            "page": 0,
+            "size": 20,
+            "totalElements": 0,
+            "totalPages": 0
+          }
+        }
+      },
+      "ComposicaoProduto": {
+        "type": "object",
+        "description": "Representação isolada da composição de um produto.",
+        "properties": {
+          "produtoId": {
+            "type": "integer",
+            "format": "int32",
+            "description": "Identificador do produto.",
+            "minimum": 1,
+            "example": 1
+          },
+          "itens": {
+            "type": "array",
+            "description": "Ingredientes e quantidades da composição.",
+            "items": {
+              "$ref": "#/components/schemas/ComposicaoProdutoItem"
+            },
+            "minItems": 1,
+            "example": [
+              {
+                "ingredienteId": 1,
+                "nomeIngrediente": "Açaí (polpa)",
+                "unidadeMedida": "kg",
+                "quantidadeUtilizada": 0.3
+              }
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "produtoId",
+          "itens"
+        ],
+        "example": {
+          "produtoId": 1,
+          "itens": [
+            {
+              "ingredienteId": 1,
+              "nomeIngrediente": "Açaí (polpa)",
+              "unidadeMedida": "kg",
+              "quantidadeUtilizada": 0.3
+            }
+          ]
+        }
+      },
+      "SubstituirComposicaoDTO": {
+        "type": "object",
+        "description": "Lista integral que substituirá a composição atual de um produto.",
+        "properties": {
+          "itens": {
+            "type": "array",
+            "description": "Nova composição completa; deve conter ao menos um ingrediente.",
+            "items": {
+              "$ref": "#/components/schemas/ComposicaoProdutoItemDTO"
+            },
+            "minItems": 1,
+            "example": [
+              {
+                "ingredienteId": 1,
+                "quantidadeUtilizada": 0.3
+              },
+              {
+                "ingredienteId": 7,
+                "quantidadeUtilizada": 1
+              }
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "itens"
+        ],
+        "example": {
+          "itens": [
+            {
+              "ingredienteId": 1,
+              "quantidadeUtilizada": 0.3
+            },
+            {
+              "ingredienteId": 7,
+              "quantidadeUtilizada": 1
+            }
+          ]
+        }
+      },
+      "VazioDTO": {
+        "type": "object",
+        "description": "Objeto vazio para operações que não recebem parâmetros de entrada.",
+        "properties": {},
+        "additionalProperties": false,
+        "example": {}
+      },
+      "ListaAlertasReposicao": {
+        "type": "object",
+        "description": "Coleção de alertas de reposição.",
+        "properties": {
+          "itens": {
+            "type": "array",
+            "description": "Alertas retornados.",
+            "items": {
+              "$ref": "#/components/schemas/AlertaReposicao"
+            },
+            "example": []
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "itens"
+        ],
+        "example": {
+          "itens": []
+        }
+      },
+      "ListaAlertasValidade": {
+        "type": "object",
+        "description": "Coleção de alertas de validade.",
+        "properties": {
+          "itens": {
+            "type": "array",
+            "description": "Alertas retornados.",
+            "items": {
+              "$ref": "#/components/schemas/AlertaValidade"
+            },
+            "example": []
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "itens"
+        ],
+        "example": {
+          "itens": []
+        }
+      },
+      "CsvFile": {
+        "type": "string",
+        "format": "binary",
+        "description": "Arquivo CSV UTF-8 retornado no corpo da resposta. O conteúdo é texto CSV, não um objeto JSON."
+      }
+    },
+    "responses": {
+      "BadRequest": {
+        "description": "Requisição malformada ou parâmetros incompatíveis.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ApiError"
+            },
+            "examples": {
+              "erro": {
+                "summary": "erro",
+                "value": {
+                  "codigo": "BAD_REQUEST",
+                  "mensagem": "A requisição está malformada ou contém uma estrutura inválida.",
+                  "detalhes": [],
+                  "timestamp": "2026-11-04T14:00:00-03:00",
+                  "caminho": "/api/v1/ingredientes",
+                  "correlationId": "7c8b4fb3-9da1-4baf-9f7d-3f2f0b7a0d2a"
+                }
+              }
+            }
+          }
+        }
+      },
+      "Unauthorized": {
+        "description": "Autenticação ausente, inválida ou expirada.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ApiError"
+            },
+            "examples": {
+              "erro": {
+                "summary": "erro",
+                "value": {
+                  "codigo": "UNAUTHORIZED",
+                  "mensagem": "Token ausente, inválido ou expirado.",
+                  "detalhes": [],
+                  "timestamp": "2026-11-04T14:00:00-03:00",
+                  "caminho": "/api/v1/{recurso}",
+                  "correlationId": "7c8b4fb3-9da1-4baf-9f7d-3f2f0b7a0d2a"
+                }
+              }
+            }
+          }
+        }
+      },
+      "Forbidden": {
+        "description": "Usuário autenticado sem permissão para a operação.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ApiError"
+            },
+            "examples": {
+              "erro": {
+                "summary": "erro",
+                "value": {
+                  "codigo": "FORBIDDEN",
+                  "mensagem": "O usuário autenticado não possui permissão para realizar esta operação.",
+                  "detalhes": [],
+                  "timestamp": "2026-11-04T14:00:00-03:00",
+                  "caminho": "/api/v1/{recurso}",
+                  "correlationId": "7c8b4fb3-9da1-4baf-9f7d-3f2f0b7a0d2a"
+                }
+              }
+            }
+          }
+        }
+      },
+      "NotFound": {
+        "description": "Recurso não encontrado.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ApiError"
+            },
+            "examples": {
+              "erro": {
+                "summary": "erro",
+                "value": {
+                  "codigo": "NOT_FOUND",
+                  "mensagem": "O recurso solicitado não foi encontrado.",
+                  "detalhes": [],
+                  "timestamp": "2026-11-04T14:00:00-03:00",
+                  "caminho": "/api/v1/{recurso}/1",
+                  "correlationId": "7c8b4fb3-9da1-4baf-9f7d-3f2f0b7a0d2a"
+                }
+              }
+            }
+          }
+        }
+      },
+      "Conflict": {
+        "description": "Conflito com o estado atual ou restrição de integridade referencial.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ApiError"
+            },
+            "examples": {
+              "erro": {
+                "summary": "erro",
+                "value": {
+                  "codigo": "CONFLICT",
+                  "mensagem": "A operação não pode ser concluída porque existe um conflito com o estado atual do recurso.",
+                  "detalhes": [],
+                  "timestamp": "2026-11-04T14:00:00-03:00",
+                  "caminho": "/api/v1/{recurso}",
+                  "correlationId": "7c8b4fb3-9da1-4baf-9f7d-3f2f0b7a0d2a"
+                }
+              }
+            }
+          }
+        }
+      },
+      "ValidationError": {
+        "description": "Os dados foram compreendidos, mas violam uma regra de validação.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ApiError"
+            },
+            "examples": {
+              "erro": {
+                "summary": "erro",
+                "value": {
+                  "codigo": "VALIDATION_ERROR",
+                  "mensagem": "A requisição contém dados que não atendem às regras de validação.",
+                  "detalhes": [
+                    {
+                      "campo": "campo",
+                      "mensagem": "O valor informado não atende às regras de validação.",
+                      "valorRejeitado": "valor-invalido"
+                    }
+                  ],
+                  "timestamp": "2026-11-04T14:00:00-03:00",
+                  "caminho": "/api/v1/{recurso}",
+                  "correlationId": "7c8b4fb3-9da1-4baf-9f7d-3f2f0b7a0d2a"
+                }
+              }
+            }
+          }
+        }
+      },
+      "InternalError": {
+        "description": "Erro interno inesperado.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ApiError"
+            },
+            "examples": {
+              "erro": {
+                "summary": "erro",
+                "value": {
+                  "codigo": "VALIDATION_ERROR",
+                  "mensagem": "A requisição contém dados inválidos.",
+                  "detalhes": [
+                    {
+                      "campo": "precoVenda",
+                      "mensagem": "Deve ser maior que zero.",
+                      "valorRejeitado": "0.00"
+                    }
+                  ],
+                  "timestamp": "2026-10-30T16:30:00-03:00",
+                  "caminho": "/api/v1/produtos",
+                  "correlationId": "7c8b4fb3-9da1-4baf-9f7d-3f2f0b7a0d2a"
+                }
+              }
+            }
+          }
+        }
+      },
+      "ServiceUnavailable": {
+        "description": "Serviço de otimização ou dependência temporariamente indisponível.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ApiError"
+            },
+            "examples": {
+              "erro": {
+                "summary": "erro",
+                "value": {
+                  "codigo": "SERVICE_UNAVAILABLE",
+                  "mensagem": "O serviço está temporariamente indisponível. Tente novamente mais tarde.",
+                  "detalhes": [],
+                  "timestamp": "2026-11-04T14:00:00-03:00",
+                  "caminho": "/api/v1/{recurso}",
+                  "correlationId": "7c8b4fb3-9da1-4baf-9f7d-3f2f0b7a0d2a"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "description": "Token de acesso emitido por /api/v1/auth/login."
+      }
+    },
+    "parameters": {
+      "IdPath": {
+        "name": "id",
+        "in": "path",
+        "description": "Identificador inteiro do recurso.",
+        "required": true,
+        "schema": {
+          "type": "integer",
+          "format": "int32",
+          "minimum": 1
+        }
+      },
+      "UnidadePath": {
+        "name": "unidadeMedida",
+        "in": "path",
+        "description": "Código da unidade de medida.",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 20
+        }
+      },
+      "Page": {
+        "name": "page",
+        "in": "query",
+        "description": "Índice da página, começando em zero.",
+        "required": false,
+        "schema": {
+          "type": "integer",
+          "minimum": 0,
+          "default": 0
+        }
+      },
+      "Size": {
+        "name": "size",
+        "in": "query",
+        "description": "Quantidade de itens por página (máximo 100).",
+        "required": false,
+        "schema": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100,
+          "default": 20
+        }
+      },
+      "Sort": {
+        "name": "sort",
+        "in": "query",
+        "description": "Ordenação no formato campo,direção. Campos aceitos dependem do recurso.",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "example": "nome,asc"
+        }
+      },
+      "Busca": {
+        "name": "q",
+        "in": "query",
+        "description": "Busca textual por nome ou campos de identificação do recurso.",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "maxLength": 100
+        }
+      }
+    }
+  },
+  "servers": [],
+  "security": []
+}
