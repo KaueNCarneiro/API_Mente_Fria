@@ -1,0 +1,37 @@
+# Mente Fria API — dependências da Fase 1 (P1-01, P1-06, P1-08)
+#
+# Python mínimo: 3.12 (STYLEGUIDE.md §1). Execução local reproduzível: ver "Comandos de
+# referência" no PLAN.md. A partir da raiz do repositório:
+#   python3.12 -m venv .venv && source .venv/bin/activate
+#   pip install -r src/api/requirements.txt
+#
+# Faixas: limite inferior = versão efetivamente instalada e verificada na Fase 1/2
+# (2026-11-15); limite superior = próxima versão maior. Para builds idênticos em
+# implantação, gerar um arquivo de lock a partir desta faixa (ex.: pip-compile).
+
+# --- Web ---
+fastapi>=0.163.1,<1.0
+uvicorn[standard]>=0.54.0,<1.0
+
+# --- Validação/serialização (Pydantic v2; o extra [email] instala email-validator,
+#     necessário para os campos `format: email` do contrato) ---
+pydantic[email]>=2.14.3,<3.0
+pydantic-settings>=2.16.3,<3.0
+
+# --- Persistência (ORM entra na Fase 3). O driver SQLite é o módulo `sqlite3` da
+#     biblioteca padrão do Python; não há pacote adicional a instalar. ---
+SQLAlchemy>=2.0,<3.0
+
+# --- Segurança (uso funcional entra na Fase 4) ---
+PyJWT>=2.15.1,<3.0
+# Biblioteca de hash de senha PROPOSTA (Argon2id). Algoritmo/parametrização sujeitos
+# à aprovação humana — PLAN.md, "Decisões técnicas que exigem aprovação humana", item 2.
+argon2-cffi>=25.1.0,<26.0
+
+# --- Testes (Fase 6) ---
+pytest>=9.2.0,<10.0
+httpx>=0.28.1,<1.0
+
+# --- NÃO ADOTADOS (dependem de aprovação humana; ver PLAN.md) ---
+# Migrações de schema (ex.: alembic) — decisão 4.
+# Solver de Programação Linear Inteira (ex.: PuLP/OR-Tools) — decisão 1.

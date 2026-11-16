@@ -1,0 +1,16 @@
+# Segredos e configuração local
+.env
+.env.*
+!.env.example
+
+# Ambiente virtual e caches
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+
+# Banco de desenvolvimento local
+mente_fria.db
+*.db
+*.sqlite3
