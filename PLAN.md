@@ -1,6 +1,6 @@
 # PLAN.md — Implementação da Mente Fria API
 
-> **Status (2026-11-15):** Fases 1 e 2 executadas e verificadas (ver *Evidências da execução*). Fases 3 a 6 **não iniciadas** — todos os seus checkboxes permanecem desmarcados. Execução interrompida para **revisão humana**; a Fase 3 só começa com autorização explícita.
+> **Status (2026-11-16):** Fases 1 e 2 concluídas. **Fase 3 executada: 19 de 22 tarefas verificadas**; P3-14 (precisão do `Numeric`), P3-19 (migrações) e P3-20 (seed) permanecem abertas por dependerem de decisões humanas (6, 4 e 5). Fases 4 a 6 **não iniciadas**. Execução interrompida para **revisão humana**.
 > **Verificação contra o contrato real:** `python verify_schemas.py --openapi "Mente Fria API.openapi.json"` executado em 2026-11-15 sobre o repositório publicado (commit `327c783`): 5 976 verificações, todas OK (inclui descrições e exemplos).
 
 ## Premissas e governança
@@ -101,6 +101,7 @@ uvicorn --factory src.api.main:create_app --reload        # iniciar a API (http:
 python -m pytest src/api/tests                            # testes (sem testes até a Fase 6: "no tests ran")
 python verify_schemas.py                                  # verificação dos schemas Pydantic (Fase 2)
 python verify_schemas.py --openapi "Mente Fria API.openapi.json"   # idem, comparando direto com o contrato
+python verify_models.py                                   # verificação prática do ORM/banco (Fase 3; SQLite em memória)
 ```
 
 Em `test`/`production` não há `.env`: forneça `MENTE_FRIA_ENV`, `MENTE_FRIA_DATABASE_URL` (obrigatório em `production`), `MENTE_FRIA_JWT_SECRET_KEY` e `MENTE_FRIA_JWT_ACCESS_TOKEN_EXPIRE_SECONDS` pelo ambiente de execução.
@@ -280,61 +281,98 @@ Em `test`/`production` não há `.env`: forneça `MENTE_FRIA_ENV`, `MENTE_FRIA_D
 
 ## Fase 3 — Modelagem ORM e banco de dados
 
-**Total de tarefas: 22** — **não iniciada**
+**Total de tarefas: 22** — **concluídas e verificadas: 19** (abertas: P3-14, P3-19, P3-20 — aguardam decisões 6, 4 e 5)
 
 ### Checklist sequencial
 
-- [ ] **P3-01** Definir `DeclarativeBase` e convenções SQLAlchemy 2.0 para `Mapped`, `mapped_column`, `relationship`, `ForeignKey` e `select()`.  
-  - Dependências: P1-03; P2-57.
-- [ ] **P3-02** Modelar `usuarios`: ID, nome, e-mail único, hash de senha, perfil limitado a `ADMINISTRADOR`/`FUNCIONARIO` e ativo.  
-  - Dependências: P3-01.
-- [ ] **P3-03** Modelar `clientes`: ID, nome, contato e endereço; permitir associação opcional a pedidos.  
-  - Dependências: P3-01.
-- [ ] **P3-04** Modelar `unidades_medida`: chave textual `unidadeMedida` e `porcaoPadrao`, com comprimento contratual.  
-  - Dependências: P3-01.
-- [ ] **P3-05** Modelar `ingredientes`: unidade referenciada, custo unitário, porção padrão e quantidade mínima; não persistir saldo editável como fonte de verdade.  
-  - Dependências: P3-01; P3-04.
-- [ ] **P3-06** Modelar `movimentacoes_estoque`/lotes: ingrediente, usuário, tipo, quantidade, data, validade, quantidade restante, observação e motivo.  
-  - Dependências: P3-01; P3-02; P3-05.
-- [ ] **P3-07** Modelar `produtos`: nome, preço de venda e estado ativo.  
-  - Dependências: P3-01.
-- [ ] **P3-08** Modelar `composicoes_produto` como associação produto–ingrediente com `quantidadeUtilizada`.  
-  - Dependências: P3-01; P3-05; P3-07.
-- [ ] **P3-09** Definir chave composta ou restrição única para impedir ingrediente duplicado na composição do mesmo produto.  
-  - Dependências: P3-08.
-- [ ] **P3-10** Modelar `pedidos`: usuário criador, cliente opcional, data, total, status e dados de cancelamento.  
-  - Dependências: P3-01; P3-02; P3-03.
-- [ ] **P3-11** Modelar `itens_pedido`: produto, quantidade, nome/preço unitário registrado e subtotal para preservar histórico comercial.  
-  - Dependências: P3-01; P3-07; P3-10.
-- [ ] **P3-12** Definir todas as `ForeignKey`, `relationship`, cardinalidades e estratégias `ondelete`/cascata sem apagar histórico referenciado.  
-  - Dependências: P3-02 a P3-11.
-- [ ] **P3-13** Definir restrições de unicidade e integridade referencial: e-mail, unidade em uso, cliente com pedido, ingrediente com composição/histórico e produto com itens históricos.  
-  - Dependências: P3-02 a P3-12.
+- [x] **P3-01** Definir `DeclarativeBase` e convenções SQLAlchemy 2.0 para `Mapped`, `mapped_column`, `relationship`, `ForeignKey` e `select()`.  
+  - Dependências: P1-03; P2-57.  
+  - Evidência: `Base(DeclarativeBase)` com `MetaData(naming_convention)`; apenas `Mapped`/`mapped_column`/`relationship`/`ForeignKey` (sem API legada). Convenção `select()` fica para services (Fase 5).
+- [x] **P3-02** Modelar `usuarios`: ID, nome, e-mail único, hash de senha, perfil limitado a `ADMINISTRADOR`/`FUNCIONARIO` e ativo.  
+  - Dependências: P3-01.  
+  - Evidência: `UsuarioModel`: e-mail `UNIQUE`, `senha_hash` (nunca senha), `CHECK perfil IN ('ADMINISTRADOR','FUNCIONARIO')`, `ativo`. Verificado: e-mail duplicado, `ADMIN`/`MEMBER` recusados.
+- [x] **P3-03** Modelar `clientes`: ID, nome, contato e endereço; permitir associação opcional a pedidos.  
+  - Dependências: P3-01.  
+  - Evidência: `ClienteModel` (nome/contato/endereço nos limites do contrato); `PedidoModel.clienteId` anulável.
+- [x] **P3-04** Modelar `unidades_medida`: chave textual `unidadeMedida` e `porcaoPadrao`, com comprimento contratual.  
+  - Dependências: P3-01.  
+  - Evidência: `UnidadeMedidaModel`: PK textual `unidade_medida` String(20), `porcaoPadrao` `Numeric(10,3)` com `CHECK >= 0.001`.
+- [x] **P3-05** Modelar `ingredientes`: unidade referenciada, custo unitário, porção padrão e quantidade mínima; não persistir saldo editável como fonte de verdade.  
+  - Dependências: P3-01; P3-04.  
+  - Evidência: `IngredienteModel` sem coluna de saldo (verificado por introspecção); `quantidadeMinima` omitida assume 0.
+- [x] **P3-06** Modelar `movimentacoes_estoque`/lotes: ingrediente, usuário, tipo, quantidade, data, validade, quantidade restante, observação e motivo.  
+  - Dependências: P3-01; P3-02; P3-05.  
+  - Evidência: `MovimentacaoEstoqueModel` com `CHECK` de coerência de lote (ENTRADA: restante entre 0 e quantidade; SAIDA: sem restante nem validade), tipo/motivo; índice de lotes por ingrediente/tipo/validade.
+- [x] **P3-07** Modelar `produtos`: nome, preço de venda e estado ativo.  
+  - Dependências: P3-01.  
+  - Evidência: `ProdutoModel`: `precoVenda` `Numeric(10,2)` com `CHECK >= 0.01`, `ativo`.
+- [x] **P3-08** Modelar `composicoes_produto` como associação produto–ingrediente com `quantidadeUtilizada`.  
+  - Dependências: P3-01; P3-05; P3-07.  
+  - Evidência: `ComposicaoProdutoModel` (`quantidadeUtilizada` `Numeric(10,3)`, `CHECK >= 0.001`); `nomeIngrediente`/`unidadeMedida` derivados do ingrediente.
+- [x] **P3-09** Definir chave composta ou restrição única para impedir ingrediente duplicado na composição do mesmo produto.  
+  - Dependências: P3-08.  
+  - Evidência: Chave primária composta `(produto_id, ingrediente_id)`; duplicação recusada (`IntegrityError` verificado).
+- [x] **P3-10** Modelar `pedidos`: usuário criador, cliente opcional, data, total, status e dados de cancelamento.  
+  - Dependências: P3-01; P3-02; P3-03.  
+  - Evidência: `PedidoModel` com `CHECK` de status e de coerência do cancelamento; `observacaoCancelamento` persistida (justificativa do `CancelamentoPedidoDTO`).
+- [x] **P3-11** Modelar `itens_pedido`: produto, quantidade, nome/preço unitário registrado e subtotal para preservar histórico comercial.  
+  - Dependências: P3-01; P3-07; P3-10.  
+  - Evidência: `PedidoItemModel` com snapshot (`nomeProduto`, `precoUnitarioRegistrado`, `subtotal`); verificado que permanece igual após alterar/desativar o produto.
+- [x] **P3-12** Definir todas as `ForeignKey`, `relationship`, cardinalidades e estratégias `ondelete`/cascata sem apagar histórico referenciado.  
+  - Dependências: P3-02 a P3-11.  
+  - Evidência: 10 FKs verificadas: todas `RESTRICT`, exceto `composicoes_produto.produto_id` (`CASCADE`, não é histórico); coleções com `passive_deletes="all"`; todos os relacionamentos resolvem em `configure_mappers()`.
+- [x] **P3-13** Definir restrições de unicidade e integridade referencial: e-mail, unidade em uso, cliente com pedido, ingrediente com composição/histórico e produto com itens históricos.  
+  - Dependências: P3-02 a P3-12.  
+  - Evidência: Verificado com `PRAGMA foreign_keys=ON`: unidade em uso, cliente com pedido, ingrediente com composição, ingrediente com movimentações, produto com itens, usuário com pedidos/movimentações e pedido com itens **não** podem ser excluídos.
 - [ ] **P3-14** Definir `Numeric` com precisão/escala adequada e conversão `Decimal` para dinheiro e quantidades decimais; não usar `float` em cálculos financeiros.  
-  - Dependências: P3-05 a P3-11.
-- [ ] **P3-15** Definir semântica de `date` e `datetime` com timezone quando aplicável, alinhada aos formatos OpenAPI.  
-  - Dependências: P3-06; P3-10.
-- [ ] **P3-16** Planejar consultas de saldo derivado a partir de lotes/entradas disponíveis, sem coluna de saldo editável como autoridade.  
-  - Dependências: P3-06; P3-14.
-- [ ] **P3-17** Planejar preservação de histórico de pedidos, itens e movimentações mesmo após desativação lógica de usuários/produtos.  
-  - Dependências: P3-02; P3-06; P3-07; P3-10; P3-11; P3-12.
-- [ ] **P3-18** Definir `database.py` com `Engine`, `SessionLocal`, `get_db`, configuração de conexão SQLite e tratamento de ciclo de sessão.  
-  - Dependências: P1-12; P3-01.
+  - Dependências: P3-05 a P3-11.  
+  - Situação: **implementado e verificado, aguardando aprovação humana** (decisão 6 — precisão/escala física). Proposta aplicada: dinheiro `Numeric(10,2)`, quantidades `Numeric(10,3)`, totais/subtotais de pedido `Numeric(15,2)`. Verificado: valores nos limites do contrato (`99999999.99`, `9999999.999`) e `valorTotal` de 12 dígitos inteiros voltam sem perda; sem `float` nos modelos; nenhum aviso do SQLAlchemy.
+- [x] **P3-15** Definir semântica de `date` e `datetime` com timezone quando aplicável, alinhada aos formatos OpenAPI.  
+  - Dependências: P3-06; P3-10.  
+  - Evidência: `TimestampTZ`: grava UTC, devolve `America/Sao_Paulo` (-03:00); `datetime` sem fuso é recusado; validade é `date` (verificado).
+- [x] **P3-16** Planejar consultas de saldo derivado a partir de lotes/entradas disponíveis, sem coluna de saldo editável como autoridade.  
+  - Dependências: P3-06; P3-14.  
+  - Evidência: `quantidadeEstoque` (soma de `quantidadeRestante` das ENTRADAS, como no contrato) e `saldoValido` (exclui lotes com validade < hoje em SP) são `column_property` somente leitura; `precisaReposicao` derivado. Verificado com lotes vencido/válido/vence-hoje.
+- [x] **P3-17** Planejar preservação de histórico de pedidos, itens e movimentações mesmo após desativação lógica de usuários/produtos.  
+  - Dependências: P3-02; P3-06; P3-07; P3-10; P3-11; P3-12.  
+  - Evidência: Verificado: alterar/desativar produto, desativar usuário e tentativa de excluir pai preservam pedidos, itens e movimentações.
+- [x] **P3-18** Definir `database.py` com `Engine`, `SessionLocal`, `get_db`, configuração de conexão SQLite e tratamento de ciclo de sessão.  
+  - Dependências: P1-12; P3-01.  
+  - Evidência: `database.py`: `create_db_engine`/`get_engine` (lazy), `SessionLocal`, `get_db` (gerador que sempre fecha a sessão), SQLite com `check_same_thread=False`, `StaticPool` em memória e `PRAGMA foreign_keys=ON`. Verificado, inclusive uso em outra thread e fechamento em exceção.
 - [ ] **P3-19** Definir inicialização de schema e integração com a estratégia de migrações aprovada.  
+  - Situação: **parcial — bloqueado pela decisão 4 (migrações)**. Existe `init_db()` explícita (`metadata.create_all`) restrita a `local`/`test`, recusada em `production` (verificado) e não chamada automaticamente; nenhuma ferramenta de migração foi adotada. A integração com a estratégia aprovada fica pendente.  
   - Dependências: P1-07; P3-12; P3-18.
 - [ ] **P3-20** Definir seed inicial somente para dados de referência aprovados/necessários; não criar administrador automaticamente nem contornar `/auth/administrador`.  
+  - Situação: **estrutura pronta, aguardando a decisão 5 (lista de dados de referência)**. `seed_reference_data()` é idempotente (verificado: 1ª execução cria, 2ª não duplica, não sobrescreve edições) e `UNIDADES_MEDIDA_REFERENCIA` está **vazia** de propósito: não há lista aprovada, então nada é inserido. Não cria usuários/administrador, nem `aluno@fatec.sp.gov.br`, nem perfis `ADMIN`/`MEMBER`.  
   - Dependências: P3-18; P3-19.
-- [ ] **P3-21** Definir banco SQLite isolado para testes (memória ou arquivo temporário), sem compartilhar o banco de desenvolvimento.  
-  - Dependências: P3-18.
-- [ ] **P3-22** Planejar testes de modelos, relacionamentos, constraints, integridade referencial e preservação de histórico.  
-  - Dependências: P3-02 a P3-21.
+- [x] **P3-21** Definir banco SQLite isolado para testes (memória ou arquivo temporário), sem compartilhar o banco de desenvolvimento.  
+  - Dependências: P3-18.  
+  - Evidência: Teste usa `sqlite:///:memory:` (recusa o arquivo de dev); dois engines de teste independentes; `mente_fria.db` não é criado.
+- [x] **P3-22** Planejar testes de modelos, relacionamentos, constraints, integridade referencial e preservação de histórico.  
+  - Dependências: P3-02 a P3-21.  
+  - Evidência: `verify_models.py` (raiz): 122 verificações OK, sem substituir a suíte pytest da Fase 6 (P6-20 e correlatas).
 
 ### Critérios de aceite
 
-- [ ] Nove grupos de entidades do domínio estão modelados e relacionados com SQLAlchemy 2.0.
-- [ ] Constraints e FKs preservam integridade e histórico; exclusões seguem regras de conflito/desativação.
-- [ ] Valores monetários/decimais usam Decimal/Numeric e saldo de estoque é derivado.
-- [ ] Engine, SessionLocal, get_db, inicialização, seed compatível com bootstrap e banco isolado de testes estão definidos.
+- [x] Nove grupos de entidades do domínio estão modelados e relacionados com SQLAlchemy 2.0.
+- [x] Constraints e FKs preservam integridade e histórico; exclusões seguem regras de conflito/desativação.
+- [ ] Valores monetários/decimais usam Decimal/Numeric e saldo de estoque é derivado. *(saldo derivado e `Decimal` verificados; falta a aprovação da precisão física — P3-14/decisão 6)*
+- [ ] Engine, SessionLocal, get_db, inicialização, seed compatível com bootstrap e banco isolado de testes estão definidos. *(Engine, SessionLocal, `get_db` e banco de testes verificados; inicialização depende da decisão 4 e o seed, da decisão 5 — P3-19/P3-20)*
+
+### Decisões da Fase 3 a validar na revisão humana
+
+1. **Nomes físicos:** tabelas conforme SPEC §4.1 (`usuarios`, `clientes`, `unidades_medida`, `ingredientes`, `movimentacoes_estoque`, `produtos`, `composicoes_produto`, `pedidos`, `itens_pedido`); colunas em `snake_case`; **atributos Python dos campos do contrato em camelCase** (iguais ao JSON), para que os schemas com `from_attributes=True` e sem aliases (P2-56) leiam o ORM diretamente. `senha_hash` é atributo interno e não existe em nenhum schema.
+2. **`Numeric`** (decisão 6): `(10,2)` dinheiro, `(10,3)` quantidades, `(15,2)` total/subtotal. O SQLite guarda `Numeric` como número de ponto flutuante; os valores verificados voltam exatos como `Decimal`, mas valores com mais de ~15 dígitos significativos perderiam precisão — por isso o teto de 15 dígitos em totais.
+3. **`ON DELETE`:** `RESTRICT` em todas as FKs de dado histórico/referenciado (inclui `pedidos.cliente_id`, que **nunca** vira `SET NULL`); única cascata destrutiva: `composicoes_produto.produto_id` (`CASCADE` + `delete-orphan`), pois a composição não é histórico e a substituição é integral.
+4. **`PedidoItemModel` com PK substituta** (`id`, interna): o contrato não proíbe o mesmo produto em mais de uma linha, então não foi imposta unicidade `(pedido, produto)`.
+5. **Saldo:** `quantidadeEstoque` = soma de `quantidadeRestante` das ENTRADAS (descrição do contrato); `saldoValido` exclui lotes vencidos e alimenta `precisaReposicao`. **Premissa a confirmar na Fase 5:** lote com validade == hoje (data de São Paulo) ainda é válido; vencido = validade < hoje. Ambos refletem o banco: após escritas, a sessão precisa reler o ingrediente (o `commit` já expira os objetos).
+6. **Datas:** `TimestampTZ` grava UTC e devolve `America/Sao_Paulo`; recusa `datetime` sem fuso (Decisão 1 da Fase 2 aceitava datas sem fuso na entrada; services devem sempre gravar com fuso, ex.: `models.agora()`). Em Windows, `zoneinfo` exige o pacote `tzdata` (adicionado ao `requirements.txt` só para `win32`).
+7. **`CHECK`s de domínio** além do contrato HTTP (defesa em profundidade): perfil, tipo/motivo, status, limites mínimos, coerência de lote (ENTRADA/SAÍDA) e de cancelamento (dados de cancelamento só em `CANCELADO`).
+8. **`dataValidade` anulável no banco** (o DTO a exige em ENTRADA, mas a SPEC §6.3 a chama de opcional; a regra fica nos services/Fase 5). Lotes sem validade contam como válidos.
+9. **`quantidadeMinima`** omitida no cadastro assume `0` (o contrato a torna opcional no DTO, mas obrigatória na resposta).
+10. **`observacaoCancelamento`** é persistida (campo do `CancelamentoPedidoDTO`), mas não faz parte do schema `Pedido`.
+11. **E-mail:** `UNIQUE` exato (sensível a maiúsculas/minúsculas); normalização (ex.: minúsculas) é decisão de service na Fase 4.
+12. **Engine preguiçosa e sem `create_all` automático:** `database.py` não cria nada ao ser importado e `init_db()` só roda quando chamada (e não em `production`). **Não foi ligada ao `lifespan` do `main.py`** (fora do escopo desta fase).
 
 ## Fase 4 — Segurança, autenticação e tratamento de erros
 
@@ -610,8 +648,8 @@ As escolhas abaixo não são fixadas pelo contrato e devem ser aprovadas antes d
 2. **Hash de senha:** confirmar Argon2id e a biblioteca Python/parametrização. O requisito é hash seguro; o algoritmo específico não é normatizado no OpenAPI. *(Fase 1 incluiu `argon2-cffi` no `requirements.txt` apenas como proposta.)*
 3. **Expiração JWT:** definir valor por ambiente e política operacional. A SPEC exige configuração, mas não determina duração fixa. *(Fase 1 exige a variável; o `.env.example` traz 3600 s só como exemplo de desenvolvimento.)*
 4. **Migrações do banco:** aprovar Alembic ou alternativa. A stack define SQLAlchemy 2.0, mas não escolhe ferramenta de migração.
-5. **Seed de dados de referência:** aprovar quais unidades/registros iniciais, se houver. Não criar administrador por seed; o primeiro administrador deve respeitar o endpoint de bootstrap.
-6. **Precisão/escala física de `Numeric`:** confirmar precisão/escala de armazenamento compatível com os limites e `multipleOf` dos schemas, sem arredondamento silencioso.
+5. **Seed de dados de referência:** aprovar quais unidades/registros iniciais, se houver. Não criar administrador por seed; o primeiro administrador deve respeitar o endpoint de bootstrap. *(Fase 3: `seed_reference_data()` pronta e idempotente, com lista vazia — nada foi inventado.)*
+6. **Precisão/escala física de `Numeric`:** confirmar precisão/escala de armazenamento compatível com os limites e `multipleOf` dos schemas, sem arredondamento silencioso. *(Fase 3 aplicou a proposta `(10,2)` / `(10,3)` / `(15,2)`; aguardando confirmação.)*
 7. **Ambiente de implantação e gestão de segredos:** definir secret manager, política de rotação e origens CORS de produção; não há valores de produção definidos nos arquivos.
 
 ## Pontos de atenção de contrato
@@ -638,14 +676,33 @@ Ambiente: Python 3.12.3, venv novo a partir de `src/api/requirements.txt`.
 | `verify_schemas.py`: 54 schemas, required, limites, enums, nullability, `additionalProperties`, extras, round-trip, `Decimal` como número JSON | 4 824 verificações OK |
 | `verify_schemas.py --openapi "Mente Fria API.openapi.json"` (arquivo real, repositório publicado) | 5 976 verificações OK |
 
+## Evidências da execução (Fase 3)
+
+Ambiente: Python 3.13.18, SQLAlchemy 2.1.9, Pydantic 2.14.3, ruff 0.16.9; SQLite em memória.
+
+| Verificação | Resultado |
+|---|---|
+| Importação dos módulos de `src.api` (28, exceto testes) | OK |
+| `Base.metadata` reconhece as 9 tabelas; `configure_mappers()` resolve todos os relacionamentos; sem coluna de saldo em `ingredientes` | OK |
+| 10 FKs com `ondelete` esperado (9 `RESTRICT`, 1 `CASCADE` em composição); nenhuma `SET NULL` | OK |
+| Unicidade/integridade: e-mail, perfil, composição duplicada, FKs inexistentes, 7 bloqueios de exclusão (unidade, cliente, ingrediente×2, produto, usuário×2, pedido), `CHECK`s de domínio e de cancelamento | OK |
+| Persistência: grafo completo, `Decimal` nos limites do contrato, datas com fuso `-03:00`, `date` preservada, saldo derivado (lote vencido/válido/vence hoje) | OK |
+| `get_db`: gerador, sessão fechada ao final e em exceção, escrita sem commit não persiste, uso de outra thread, `PRAGMA foreign_keys=ON` | OK |
+| Isolamento: teste = memória, recusa `mente_fria.db`, dois bancos independentes, nenhum arquivo `.db` criado; `init_db` recusada em `production` | OK |
+| Seed: padrão não insere nada, idempotente com dados injetados, não cria usuários | OK |
+| Schemas × ORM (`from_attributes`): `Usuario` (sem hash), `Cliente`, `UnidadeMedida`, `Ingrediente`, `MovimentacaoEstoque`, `Produto`, `Pedido`, `PedidoItem`, `ComposicaoProdutoItem`; todos os campos existem nos modelos; JSON mantém nomes e `Decimal` numérico | OK |
+| `python verify_models.py` | **122 verificações OK, 0 falhas** |
+| `python verify_schemas.py --openapi "Mente Fria API.openapi.json"` (regressão da Fase 2) | 5 976 verificações OK |
+| `ruff check src verify_models.py` | OK (único aviso restante: `RUF100` pré-existente em `verify_schemas.py`) |
+
 ## Contagem de tarefas
 
 | Fase | Tarefas | Concluídas |
 |---|---:|---:|
 | Fase 1 | 17 | 17 |
 | Fase 2 | 64 | 64 |
-| Fase 3 | 22 | 0 |
+| Fase 3 | 22 | 19 |
 | Fase 4 | 18 | 0 |
 | Fase 5 | 68 | 0 |
 | Fase 6 | 26 | 0 |
-| **Total** | **215** | **81** |
+| **Total** | **215** | **100** |
