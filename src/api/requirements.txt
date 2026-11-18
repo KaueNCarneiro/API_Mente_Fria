@@ -31,10 +31,16 @@ PyJWT>=2.15.1,<3.0
 # à aprovação humana — PLAN.md, "Decisões técnicas que exigem aprovação humana", item 2.
 argon2-cffi>=25.1.0,<26.0
 
+# --- Otimização (Fase 5) ---
+# Solver de Programação Linear Inteira APROVADO em 2026-11-18 (PLAN.md, decisão 1).
+# Python puro, com o CBC distribuído no próprio pacote: não exige solver do sistema.
+PuLP>=3.3.2,<4.0
+
 # --- Testes (Fase 6) ---
 pytest>=9.2.0,<10.0
 httpx>=0.28.1,<1.0
 
 # --- NÃO ADOTADOS (dependem de aprovação humana; ver PLAN.md) ---
-# Migrações de schema (ex.: alembic) — decisão 4.
-# Solver de Programação Linear Inteira (ex.: PuLP/OR-Tools) — decisão 1.
+# Migrações de schema (ex.: alembic) — decisão 4 RESOLVIDA em 2026-11-18: nenhuma
+# ferramenta de migração foi adotada; a criação de schema é `database.init_db()`,
+# restrita a local/test e recusada em production.

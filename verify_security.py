@@ -52,7 +52,7 @@ from src.api.exceptions import (
     registrar_handlers,
     resposta_sem_conteudo,
 )
-from src.api.main import create_app
+from src.api.main import create_app, rotas_da_api
 from src.api.schemas import ApiError, CreateAdminDTO, CreateFuncionarioDTO, LoginDTO
 
 OK = FAIL = 0
@@ -615,9 +615,18 @@ def main() -> int:
     check("404 da aplicação real usa ApiError",
           set(r.json()) == {"codigo", "mensagem", "detalhes", "timestamp", "caminho", "correlationId"},
           str(sorted(r.json())))
-    caminhos = {rota.path for rota in app_real.routes if hasattr(rota, "path")}
-    negocio = {c for c in caminhos if c.startswith("/api/v1")}
-    check("nenhum router de negócio registrado (Fase 5)", negocio == set(), str(negocio))
+    # Desde a Fase 5 os 13 routers estão registrados; a varredura precisa descer nos
+    # routers aninhados (FastAPI >= 0.163 não achata as rotas em `app.routes`).
+    operation_ids = {rota.operation_id for rota in rotas_da_api(app_real) if rota.operation_id}
+    check("44 operações registradas (Fase 5)", len(operation_ids) == 44, str(len(operation_ids)))
+    check(
+        "nenhuma rota fora do contrato (sem /auth/me, /tasks, /projects)",
+        not any(
+            termo in caminho
+            for caminho in app_real.openapi()["paths"]
+            for termo in ("/auth/me", "/tasks", "/projects")
+        ),
+    )
     check("openapi.json da aplicação responde", cliente_real.get("/openapi.json").status_code == 200)
 
     print()
