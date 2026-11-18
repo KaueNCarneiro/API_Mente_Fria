@@ -1,6 +1,6 @@
 # PLAN.md — Implementação da Mente Fria API
 
-> **Status (2026-11-18):** Fases 1 a 5 concluídas. **Fase 3: 22 de 22** (P3-19 e P3-20 fechadas com as decisões 4 e 5). **Fase 4: 18 de 18.** **Fase 5 executada: 68 de 68 tarefas verificadas** — 26 caminhos, 44 operações, 13 routers e 12 services, com as decisões 1 (solver PuLP), 4 (migrações) e 5 (seed) aprovadas na revisão humana de 2026-11-18. **Fase 6 não iniciada.** Execução interrompida para **revisão humana**.
+> **Status (2026-11-18):** **as seis fases estão concluídas — 215 de 215 tarefas.** Fases 1 e 2 (schemas), 3 (ORM), 4 (segurança e erros), 5 (26 caminhos, 44 operações, 13 routers, 12 services) e **6 (suíte pytest: 757 aprovados, 0 falhos, 1 ignorado, em duas execuções)**. Das sete decisões técnicas, seis foram aprovadas; resta a 7 (ambiente de implantação e gestão de segredos), que só é exigida para colocar a API em produção. Execução interrompida para **revisão humana**.
 > **Verificação contra o contrato real:** `python verify_schemas.py --openapi "Mente Fria API.openapi.json"` executado em 2026-11-15 sobre o repositório publicado (commit `327c783`): 5 976 verificações, todas OK (inclui descrições e exemplos).
 
 ## Premissas e governança
@@ -774,69 +774,122 @@ Ambiente: Python 3.14.0 (`.venv` a partir de `src/api/requirements.txt`), FastAP
 
 ## Fase 6 — Suíte de testes e validação
 
-**Total de tarefas: 26** — **não iniciada**
+**Total de tarefas: 26** — **concluídas e verificadas: 26** (`pytest` executado: 757 aprovados, 0 falhas, 1 ignorado)
 
 ### Checklist sequencial
 
-- [ ] **P6-01** Configurar `pytest`, `TestClient`, `httpx` e opções de execução/descoberta da suíte.  
+- [x] **P6-01** Configurar `pytest`, `TestClient`, `httpx` e opções de execução/descoberta da suíte.  
   - Dependências: P1-06; P3-21.
-- [ ] **P6-02** Criar `tests/conftest.py` com banco SQLite isolado, criação/limpeza determinística, overrides de `get_db` e fixtures comuns.  
+- [x] **P6-02** Criar `tests/conftest.py` com banco SQLite isolado, criação/limpeza determinística, overrides de `get_db` e fixtures comuns.  
   - Dependências: P3-21; P6-01.
-- [ ] **P6-03** Criar fixtures de usuários ADMINISTRADOR/FUNCIONARIO e tokens JWT para cenários autenticados.  
+- [x] **P6-03** Criar fixtures de usuários ADMINISTRADOR/FUNCIONARIO e tokens JWT para cenários autenticados.  
   - Dependências: P4-03; P4-07; P6-02.
-- [ ] **P6-04** Criar `test_saude.py` para saúde da API/banco e indisponibilidade contratual.  
+- [x] **P6-04** Criar `test_saude.py` para saúde da API/banco e indisponibilidade contratual.  
   - Dependências: P5-20; P5-65; P6-02.
-- [ ] **P6-05** Criar `test_auth.py` para bootstrap único, login, hash, conta inativa e expiração/invalidade JWT.  
+- [x] **P6-05** Criar `test_auth.py` para bootstrap único, login, hash, conta inativa e expiração/invalidade JWT.  
   - Dependências: P4-08; P4-09; P6-03.
-- [ ] **P6-06** Criar `test_usuarios.py` para CRUD declarado, perfil FUNCIONARIO, atualização permitida e desativação lógica.  
+- [x] **P6-06** Criar `test_usuarios.py` para CRUD declarado, perfil FUNCIONARIO, atualização permitida e desativação lógica.  
   - Dependências: P5-20; P6-03.
-- [ ] **P6-07** Criar `test_clientes.py` para CRUD, associação opcional a pedido e conflito ao excluir cliente referenciado.  
+- [x] **P6-07** Criar `test_clientes.py` para CRUD, associação opcional a pedido e conflito ao excluir cliente referenciado.  
   - Dependências: P5-20; P6-03.
-- [ ] **P6-08** Criar `test_unidades_medida.py` para CRUD, porção padrão e bloqueio de exclusão em uso.  
+- [x] **P6-08** Criar `test_unidades_medida.py` para CRUD, porção padrão e bloqueio de exclusão em uso.  
   - Dependências: P5-20; P6-03.
-- [ ] **P6-09** Criar `test_ingredientes.py` para CRUD, estoque inicial zero, saldo derivado e bloqueio de exclusão com composição/histórico.  
+- [x] **P6-09** Criar `test_ingredientes.py` para CRUD, estoque inicial zero, saldo derivado e bloqueio de exclusão com composição/histórico.  
   - Dependências: P5-20; P6-03.
-- [ ] **P6-10** Criar `test_movimentacoes_estoque.py` para entrada, saída, saldo, validade, quantidade restante, FEFO, lote vencido e auditoria.  
+- [x] **P6-10** Criar `test_movimentacoes_estoque.py` para entrada, saída, saldo, validade, quantidade restante, FEFO, lote vencido e auditoria.  
   - Dependências: P5-03; P5-04; P5-20; P6-03.
-- [ ] **P6-11** Criar `test_produtos.py` para CRUD, composição válida, substituição integral e preservação de preços históricos.  
+- [x] **P6-11** Criar `test_produtos.py` para CRUD, composição válida, substituição integral e preservação de preços históricos.  
   - Dependências: P5-20; P6-03.
-- [ ] **P6-12** Criar `test_pedidos.py` para cálculo de preços, transação atômica, estoque insuficiente, baixas FEFO e cancelamento sem reposição.  
+- [x] **P6-12** Criar `test_pedidos.py` para cálculo de preços, transação atômica, estoque insuficiente, baixas FEFO e cancelamento sem reposição.  
   - Dependências: P5-05; P5-06; P5-07; P6-03.
-- [ ] **P6-13** Criar `test_alertas.py` para alertas de reposição e validade.  
+- [x] **P6-13** Criar `test_alertas.py` para alertas de reposição e validade.  
   - Dependências: P5-12; P5-13; P6-03.
-- [ ] **P6-14** Criar `test_recomendacoes.py` para produção, reposição, restrições de entrada e indisponibilidade `503` do solver.  
+- [x] **P6-14** Criar `test_recomendacoes.py` para produção, reposição, restrições de entrada e indisponibilidade `503` do solver.  
   - Dependências: P5-08 a P5-11; P6-03.
-- [ ] **P6-15** Criar `test_dashboard.py` para período, agregações, exclusão de pedidos cancelados e exportação CSV UTF-8.  
+- [x] **P6-15** Criar `test_dashboard.py` para período, agregações, exclusão de pedidos cancelados e exportação CSV UTF-8.  
   - Dependências: P5-15; P5-16; P6-03.
-- [ ] **P6-16** Criar `test_errors.py` para envelope `ApiError` em `400`, `401`, `403`, `404`, `409`, `422`, `503` e erros internos tratados.  
+- [x] **P6-16** Criar `test_errors.py` para envelope `ApiError` em `400`, `401`, `403`, `404`, `409`, `422`, `503` e erros internos tratados.  
   - Dependências: P4-12 a P4-17; P6-02.
-- [ ] **P6-17** Adicionar testes de validação para todos os 54 schemas, incluindo aliases, limites, enums, formatos e `additionalProperties`.  
+- [x] **P6-17** Adicionar testes de validação para todos os 54 schemas, incluindo aliases, limites, enums, formatos e `additionalProperties`.  
   - Dependências: P2-62 a P2-64; P6-01.
-- [ ] **P6-18** Adicionar testes de paginação, filtros, ordenação e parâmetros por recurso conforme o OpenAPI.  
+- [x] **P6-18** Adicionar testes de paginação, filtros, ordenação e parâmetros por recurso conforme o OpenAPI.  
   - Dependências: P5-17; P5-18; P6-02.
-- [ ] **P6-19** Adicionar testes de RBAC para cada operação, cobrindo `401`, `403` e rotas que exigem apenas autenticação sem restrição adicional de papel.  
+- [x] **P6-19** Adicionar testes de RBAC para cada operação, cobrindo `401`, `403` e rotas que exigem apenas autenticação sem restrição adicional de papel.  
   - Dependências: P4-07; P5-68; P6-03.
-- [ ] **P6-20** Adicionar testes de integridade referencial, exclusões lógicas, constraints únicas e conflitos `409`.  
+- [x] **P6-20** Adicionar testes de integridade referencial, exclusões lógicas, constraints únicas e conflitos `409`.  
   - Dependências: P3-12; P3-13; P5-20; P6-02.
-- [ ] **P6-21** Adicionar testes de transação e rollback para falhas durante registro de pedidos e movimentações relacionadas.  
+- [x] **P6-21** Adicionar testes de transação e rollback para falhas durante registro de pedidos e movimentações relacionadas.  
   - Dependências: P5-06; P6-12.
-- [ ] **P6-22** Adicionar testes de `204` garantindo corpo vazio e de CSV garantindo media type/encoding corretos.  
+- [x] **P6-22** Adicionar testes de `204` garantindo corpo vazio e de CSV garantindo media type/encoding corretos.  
   - Dependências: P5-67; P5-16; P6-15.
-- [ ] **P6-23** Implementar teste de conformidade automatizada entre OpenAPI e rotas efetivamente registradas: caminhos, métodos, `operationId`, parâmetros, schemas, respostas e segurança.  
+- [x] **P6-23** Implementar teste de conformidade automatizada entre OpenAPI e rotas efetivamente registradas: caminhos, métodos, `operationId`, parâmetros, schemas, respostas e segurança.  
   - Dependências: P5-66; P5-67; P5-68; P6-01.
-- [ ] **P6-24** Executar a suíte completa com `pytest`, registrar resultados e corrigir falhas dentro do escopo planejado.  
+- [x] **P6-24** Executar a suíte completa com `pytest`, registrar resultados e corrigir falhas dentro do escopo planejado.  
   - Dependências: P6-01 a P6-23.
-- [ ] **P6-25** Reexecutar a suíte completa após correções e guardar evidência reproduzível do resultado final.  
+- [x] **P6-25** Reexecutar a suíte completa após correções e guardar evidência reproduzível do resultado final.  
   - Dependências: P6-24.
-- [ ] **P6-26** Marcar itens/fase como concluídos somente após comprovação de execução e aprovação dos critérios de aceite, conforme AGENTS.md.  
+- [x] **P6-26** Marcar itens/fase como concluídos somente após comprovação de execução e aprovação dos critérios de aceite, conforme AGENTS.md.  
   - Dependências: P6-25.
 
 ### Critérios de aceite
 
-- [ ] Fixtures isolam banco e usuários/tokens; os 13 arquivos de teste por domínio estão criados.
-- [ ] Schemas, CRUD, filtros, paginação, RBAC, integridade, FEFO, pedidos, alertas, recomendações, dashboard e CSV estão cobertos.
-- [ ] Envelope ApiError, códigos HTTP, 204 sem corpo e conformidade OpenAPI estão validados.
-- [ ] `pytest` foi executado e aprovado; somente então tarefas e fase podem ser marcadas `[x]`.
+- [x] Fixtures isolam banco e usuários/tokens; os 13 arquivos de teste por domínio estão criados (mais `test_schemas.py` e `test_contrato_openapi.py`).
+- [x] Schemas, CRUD, filtros, paginação, RBAC, integridade, FEFO, pedidos, alertas, recomendações, dashboard e CSV estão cobertos.
+- [x] Envelope ApiError, códigos HTTP, 204 sem corpo e conformidade OpenAPI estão validados.
+- [x] `pytest` foi executado e aprovado: **757 aprovados, 0 falhos, 1 ignorado**, em duas execuções consecutivas.
+
+### Decisões da Fase 6 a validar na revisão humana
+
+1. **Dois arquivos além dos 13 do STYLEGUIDE:** `test_schemas.py` (P6-17, cobertura dos 54 schemas) e `test_contrato_openapi.py` (P6-23, conformidade do documento gerado com o contrato). Os dois requisitos atravessam todos os domínios; espalhá-los pelos 13 arquivos esconderia a cobertura. Os 13 previstos existem e cobrem seus domínios.
+2. **Banco em memória por teste, não por sessão:** cada teste recebe um SQLite novo (`sqlite:///:memory:`), criado e descartado pela fixture. Mais lento (a suíte leva ~3 min 45 s), porém determinístico: nenhum teste depende da ordem nem herda estado de outro.
+3. **Identidades criadas pela própria API:** as fixtures `admin` e `funcionario` fazem bootstrap e cadastro pelos endpoints contratuais, em vez de inserir linhas no banco. Assim o caminho de autenticação é exercitado em todo teste autenticado, e nenhum usuário de demonstração é inventado. E-mails da suíte: `administradora@mentefria.com` e `funcionario@mentefria.com` — domínio `.test` não serve, pois o `email-validator` recusa domínios de uso especial.
+4. **`verify_schemas.py` executado como teste** (`test_verificador_de_schemas_contra_o_contrato`, marcado `slow`): são 5 976 conferências de limites, enums, formatos e exemplos contra o arquivo do contrato. Reescrevê-las à mão multiplicaria a chance de erro sem ganho de cobertura. Os 54 schemas também têm teste parametrizado próprio (campos, obrigatoriedade e objeto fechado).
+5. **Um teste ignorado, de propósito:** `CsvFile` é `type: string` no contrato, não um objeto com `example`, então o teste de exemplo é pulado para ele. É o único `skip` da suíte.
+6. **Os verificadores das fases anteriores foram mantidos.** `verify_api.py`, `verify_security.py` e `verify_models.py` continuam no repositório e passando: cobrem ângulos que a suíte não cobre (N+1 por contagem de SELECTs, concorrência de bootstrap com threads, integridade no nível do ORM).
+
+### Defeito de implementação encontrado pela suíte
+
+`test_producao_ignora_estoque_vencido` reprovou na primeira execução: a recomendação de produção sugeria **10 000 unidades** (o teto do solver) de um produto cujo ingrediente só tinha lote vencido.
+
+Causa: `_saldos_validos` devolve apenas ingredientes **com** saldo válido. Ingrediente sem saldo não aparecia no mapa, nenhuma restrição era criada para ele, e o produto ficava sem limite no modelo de otimização. Corrigido em `services/recomendacoes.py`: a restrição passa a ser criada para **todo** ingrediente consumido pelos candidatos, com disponibilidade zero quando ausente do mapa. `verify_api.py` seguiu com 1 025 verificações OK depois da correção.
+
+### Evidências da execução (Fase 6)
+
+Ambiente: Python 3.14.0 (`.venv` a partir de `src/api/requirements.txt`), pytest 9.2.0, FastAPI 0.163.2, SQLAlchemy 2.1.9, PuLP 3.3.2; SQLite em memória, um banco por teste.
+
+Comando: `python -m pytest` (configuração em `pytest.ini`).
+
+**Resultado real: 757 aprovados · 0 falhos · 1 ignorado · 0 erros**, em **duas execuções consecutivas** (~3 min 45 s cada).
+
+| Módulo | Testes | Cobertura |
+|---|---:|---|
+| `test_saude.py` | 5 | operação pública, banco indisponível (`degradado`/`indisponivel`), sem vazar infraestrutura |
+| `test_auth.py` | 23 | bootstrap único e `409`, login, hash Argon2id e parâmetros, conta inativa, token ausente/inválido/expirado/outra chave/`alg=none`/usuário inexistente/desativado, claims mínimos |
+| `test_usuarios.py` | 32 | CRUD, perfil sempre `FUNCIONARIO`, DTO recusa `perfil`, `409` de e-mail, desativação lógica, paginação, busca, ordenação, `sort` inválido `400`, RBAC |
+| `test_clientes.py` | 24 | CRUD, validação, cliente opcional no pedido, `409` com pedido associado, busca em três campos, curinga literal, ambos os perfis |
+| `test_unidades_medida.py` | 23 | CRUD, `porcaoPadrao` não recalcula ingredientes, `409` em uso, limites, paginação, RBAC |
+| `test_ingredientes.py` | 27 | estoque inicial zero, saldo derivado, `PUT` não altera saldo, `precisaReposicao` só com saldo válido, `409` por composição/histórico, filtros |
+| `test_movimentacoes_estoque.py` | 25 | ENTRADA cria lote, SAIDA não, **FEFO**, lote sem validade por último, vence hoje ainda vale, vencido intocado, **descarte de vencidos**, auditoria do usuário, filtros |
+| `test_produtos.py` | 28 | composição válida/inválida/repetida, substituição integral, **preço histórico preservado**, desativação lógica, filtros |
+| `test_pedidos.py` | 31 | preço capturado, `Decimal`, baixa FEFO com motivo `PEDIDO`, estoque insuficiente `409`, **rollback integral** (inclusive falha no 2º item), cancelamento sem devolução, `409` ao recancelar |
+| `test_alertas.py` | 19 | déficit, saldo válido x vencido, `somenteCriticos`, `diasAntecedencia`, `incluirVencidos`, lote sem validade e esgotado |
+| `test_recomendacoes.py` | 27 | quantidades inteiras dentro do estoque, lucro unitário e total, ignora vencido e desativado, reposição no orçamento, validação, **`503` do solver**, marketing sem persistência |
+| `test_dashboard.py` | 22 | agregações, **ignora cancelados**, ranking, período obrigatório e invertido `400`, CSV `text/csv` UTF-8 sem BOM, `Content-Disposition`, acentuação, mesmas regras do JSON |
+| `test_errors.py` | 30 | envelope em 400/401/403/404/409/422, códigos estáveis, `timestamp` com fuso, `caminho`, `correlationId` único, detalhes por campo, senha não ecoada, corpo ilegível, `500` sem stack trace, `204` sem corpo, `/auth/me` inexistente |
+| `test_schemas.py` | 128 | os **54 schemas** (campos, obrigatoriedade, objeto fechado), exemplos do contrato, limites, enums, nomes JSON, `verify_schemas.py` (5 976 conferências) |
+| `test_contrato_openapi.py` | 314 | por operação: método, caminho, tags, parâmetros, corpo, status, media types, headers, schema de resposta e `security`; matriz RBAC (3/27/5/9) |
+| **Total** | **758** | 757 aprovados, 1 ignorado (`CsvFile` não declara exemplo de objeto) |
+
+Regressões executadas junto: `verify_api.py` 1 025 OK · `verify_security.py` 306 OK · `verify_models.py` 122 OK · `ruff check src verify_api.py verify_security.py` limpo.
+
+### Lacunas conhecidas
+
+- **Expiração real do token** é testada com um JWT forjado com `exp` no passado, não esperando 3 600 s.
+- **Concorrência** (bootstrap simultâneo) fica em `verify_security.py`, que usa threads e banco em arquivo; a suíte pytest não a reproduz.
+- **Ausência de N+1** fica em `verify_api.py`, que conta SELECTs por requisição; não há asserção equivalente no pytest.
+- **Banco indisponível** é testado no service (`monkeypatch` da sessão), não derrubando um banco de verdade.
+- A decisão 7 (ambiente de implantação e gestão de segredos) segue pendente e **não** é coberta por testes: depende de infraestrutura real.
+
 
 ## Decisões técnicas que exigem aprovação humana
 
@@ -899,8 +952,8 @@ Ambiente: Python 3.13.18, SQLAlchemy 2.1.9, Pydantic 2.14.3, ruff 0.16.9; SQLite
 |---|---:|---:|
 | Fase 1 | 17 | 17 |
 | Fase 2 | 64 | 64 |
-| Fase 3 | 22 | 20 |
+| Fase 3 | 22 | 22 |
 | Fase 4 | 18 | 18 |
 | Fase 5 | 68 | 68 |
-| Fase 6 | 26 | 0 |
-| **Total** | **215** | **100** |
+| Fase 6 | 26 | 26 |
+| **Total** | **215** | **215** |

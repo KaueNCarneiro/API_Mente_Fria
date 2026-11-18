@@ -120,9 +120,17 @@ def recomendar_producao(db: Session) -> ProducaoRecomendacao:
         lucro_por_produto[produto.id] = lucro
         nomes[produto.id] = produto.nome
 
+    # A restrição precisa existir para **todo** ingrediente consumido pelos candidatos,
+    # inclusive os de saldo zero: sem a linha correspondente, o produto ficaria sem limite
+    # e o solver devolveria o teto de unidades. `_saldos_validos` só lista quem tem saldo.
+    ingredientes_usados = {
+        ingrediente_id for item in itens for ingrediente_id in item.consumo
+    }
     restricoes = [
-        RestricaoIngrediente(ingrediente_id=ingrediente_id, disponivel=saldo)
-        for ingrediente_id, saldo in sorted(saldos.items())
+        RestricaoIngrediente(
+            ingrediente_id=ingrediente_id, disponivel=saldos.get(ingrediente_id, Decimal(0))
+        )
+        for ingrediente_id in sorted(ingredientes_usados | set(saldos))
     ]
 
     try:
