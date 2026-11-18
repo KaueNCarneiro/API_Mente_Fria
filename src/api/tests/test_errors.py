@@ -178,6 +178,33 @@ def test_metodo_nao_permitido_usa_o_envelope(client: TestClient, admin: dict[str
     assert set(resposta.json()) == campos_do_api_error()
 
 
+def test_metodo_errado_nao_e_rotulado_como_erro_interno(client: TestClient) -> None:
+    """`GET` num caminho que só aceita `POST`: 405, e o corpo não pode dizer "erro interno".
+
+    O contrato não declara 405, mas o framework o emite antes de chegar à operação. Dizer
+    `INTERNAL_ERROR` faria o consumidor procurar um defeito no servidor que não existe.
+    """
+    resposta = client.get("/api/v1/auth/login")
+    corpo = assert_api_error(resposta, 405, "METHOD_NOT_ALLOWED")
+    assert corpo["mensagem"] == "Método HTTP não permitido para este caminho."
+
+
+def test_mensagens_de_erro_do_framework_saem_em_portugues(
+    client: TestClient, admin: dict[str, str]
+) -> None:
+    """O `detail` do Starlette vem em inglês; a resposta pública usa a nossa mensagem."""
+    corpo_malformado = client.post(
+        "/api/v1/usuarios",
+        headers={**admin, "Content-Type": "application/json"},
+        content=b"{quebrado",
+    )
+    for resposta in (corpo_malformado, client.get("/api/v1/nao-existe")):
+        mensagem = resposta.json()["mensagem"]
+        assert "error" not in mensagem.lower()
+        assert "not found" not in mensagem.lower()
+        assert mensagem.endswith(".")
+
+
 def test_erro_interno_nao_vaza_stack_trace(client: TestClient, admin: dict[str, str], monkeypatch) -> None:
     """500 tratado: envelope `ApiError` e nenhum detalhe interno na resposta."""
     from src.api.services import usuarios as servico
