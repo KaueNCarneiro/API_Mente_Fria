@@ -1,6 +1,6 @@
 # PLAN.md — Implementação da Mente Fria API
 
-> **Status (2026-11-17):** Fases 1 e 2 concluídas. **Fase 3: 20 de 22 tarefas** — P3-14 fechada com a aprovação da decisão 6; P3-19 (migrações) e P3-20 (seed) seguem **abertas**, bloqueadas pelas decisões 4 e 5. **Fase 4 executada: 18 de 18 tarefas verificadas** (decisões 2 e 3 aprovadas na revisão humana de 2026-11-17). Fases 5 e 6 **não iniciadas**. Execução interrompida para **revisão humana**.
+> **Status (2026-11-18):** Fases 1 a 5 concluídas. **Fase 3: 22 de 22** (P3-19 e P3-20 fechadas com as decisões 4 e 5). **Fase 4: 18 de 18.** **Fase 5 executada: 68 de 68 tarefas verificadas** — 26 caminhos, 44 operações, 13 routers e 12 services, com as decisões 1 (solver PuLP), 4 (migrações) e 5 (seed) aprovadas na revisão humana de 2026-11-18. **Fase 6 não iniciada.** Execução interrompida para **revisão humana**.
 > **Verificação contra o contrato real:** `python verify_schemas.py --openapi "Mente Fria API.openapi.json"` executado em 2026-11-15 sobre o repositório publicado (commit `327c783`): 5 976 verificações, todas OK (inclui descrições e exemplos).
 
 ## Premissas e governança
@@ -281,7 +281,7 @@ Em `test`/`production` não há `.env`: forneça `MENTE_FRIA_ENV`, `MENTE_FRIA_D
 
 ## Fase 3 — Modelagem ORM e banco de dados
 
-**Total de tarefas: 22** — **concluídas e verificadas: 20** (P3-14 fechada em 2026-11-17 com a aprovação da decisão 6; abertas: P3-19 e P3-20 — aguardam as decisões 4 e 5)
+**Total de tarefas: 22** — **concluídas e verificadas: 22** (P3-14 fechada em 2026-11-17 com a decisão 6; P3-19 e P3-20 fechadas em 2026-11-18 com as decisões 4 e 5)
 
 ### Checklist sequencial
 
@@ -339,11 +339,11 @@ Em `test`/`production` não há `.env`: forneça `MENTE_FRIA_ENV`, `MENTE_FRIA_D
 - [x] **P3-18** Definir `database.py` com `Engine`, `SessionLocal`, `get_db`, configuração de conexão SQLite e tratamento de ciclo de sessão.  
   - Dependências: P1-12; P3-01.  
   - Evidência: `database.py`: `create_db_engine`/`get_engine` (lazy), `SessionLocal`, `get_db` (gerador que sempre fecha a sessão), SQLite com `check_same_thread=False`, `StaticPool` em memória e `PRAGMA foreign_keys=ON`. Verificado, inclusive uso em outra thread e fechamento em exceção.
-- [ ] **P3-19** Definir inicialização de schema e integração com a estratégia de migrações aprovada.  
-  - Situação: **parcial — bloqueado pela decisão 4 (migrações)**. Existe `init_db()` explícita (`metadata.create_all`) restrita a `local`/`test`, recusada em `production` (verificado) e não chamada automaticamente; nenhuma ferramenta de migração foi adotada. A integração com a estratégia aprovada fica pendente.  
+- [x] **P3-19** Definir inicialização de schema e integração com a estratégia de migrações aprovada.  
+  - Evidência: **decisão 4 aprovada em 2026-11-18** — nenhuma ferramenta de migração adotada. A estratégia aprovada é `init_db()` (`metadata.create_all`), ligada ao `lifespan` do `main.py` apenas em `local`/`test` e recusada em `production` (onde o schema é responsabilidade da implantação). Verificado: a aplicação sobe criando as tabelas em teste e `init_db` continua levantando erro em `production`.  
   - Dependências: P1-07; P3-12; P3-18.
-- [ ] **P3-20** Definir seed inicial somente para dados de referência aprovados/necessários; não criar administrador automaticamente nem contornar `/auth/administrador`.  
-  - Situação: **estrutura pronta, aguardando a decisão 5 (lista de dados de referência)**. `seed_reference_data()` é idempotente (verificado: 1ª execução cria, 2ª não duplica, não sobrescreve edições) e `UNIDADES_MEDIDA_REFERENCIA` está **vazia** de propósito: não há lista aprovada, então nada é inserido. Não cria usuários/administrador, nem `aluno@fatec.sp.gov.br`, nem perfis `ADMIN`/`MEMBER`.  
+- [x] **P3-20** Definir seed inicial somente para dados de referência aprovados/necessários; não criar administrador automaticamente nem contornar `/auth/administrador`.  
+  - Evidência: **decisão 5 aprovada em 2026-11-18** — nenhum dado de referência é semeado. `UNIDADES_MEDIDA_REFERENCIA` permanece **vazia** e `seed_reference_data()` não é chamada pelo `lifespan`; as unidades nascem por `POST /api/v1/unidades-medida`, que o contrato prevê. O primeiro administrador continua nascendo apenas em `POST /api/v1/auth/administrador` (verificado: bootstrap pela API e 409 na segunda tentativa).  
   - Dependências: P3-18; P3-19.
 - [x] **P3-21** Definir banco SQLite isolado para testes (memória ou arquivo temporário), sem compartilhar o banco de desenvolvimento.  
   - Dependências: P3-18.  
@@ -357,7 +357,7 @@ Em `test`/`production` não há `.env`: forneça `MENTE_FRIA_ENV`, `MENTE_FRIA_D
 - [x] Nove grupos de entidades do domínio estão modelados e relacionados com SQLAlchemy 2.0.
 - [x] Constraints e FKs preservam integridade e histórico; exclusões seguem regras de conflito/desativação.
 - [x] Valores monetários/decimais usam Decimal/Numeric e saldo de estoque é derivado. *(saldo derivado e `Decimal` verificados; precisão física aprovada em 2026-11-17 — P3-14/decisão 6)*
-- [ ] Engine, SessionLocal, get_db, inicialização, seed compatível com bootstrap e banco isolado de testes estão definidos. *(Engine, SessionLocal, `get_db` e banco de testes verificados; inicialização depende da decisão 4 e o seed, da decisão 5 — P3-19/P3-20)*
+- [x] Engine, SessionLocal, get_db, inicialização, seed compatível com bootstrap e banco isolado de testes estão definidos. *(decisões 4 e 5 aprovadas em 2026-11-18; `init_db` no lifespan fora de produção e seed vazio — P3-19/P3-20)*
 
 ### Decisões da Fase 3 a validar na revisão humana
 
@@ -516,153 +516,258 @@ Ambiente: Python 3.14.0 (`.venv` novo a partir de `src/api/requirements.txt`), F
 
 ## Fase 5 — Services, routers e integração da API
 
-**Total de tarefas: 68** — **não iniciada**
+**Total de tarefas: 68** — **concluídas e verificadas: 68** (decisões 1, 4 e 5 aprovadas na revisão humana de 2026-11-18)
 
 ### Checklist sequencial
 
-- [ ] **P5-01** Definir contratos internos de services e dependências de sessão para manter regras de negócio fora dos routers.  
+- [x] **P5-01** Definir contratos internos de services e dependências de sessão para manter regras de negócio fora dos routers.  
   - Dependências: P2-57; P3-18; P4-12.
-- [ ] **P5-02** Planejar services de usuários/autenticação, clientes, unidades, ingredientes, produtos, alertas, marketing e dashboard.  
+- [x] **P5-02** Planejar services de usuários/autenticação, clientes, unidades, ingredientes, produtos, alertas, marketing e dashboard.  
   - Dependências: P5-01.
-- [ ] **P5-03** Implementar service de estoque: saldo derivado, lotes, validade, entradas, saídas, quantidade restante e auditoria.  
+- [x] **P5-03** Implementar service de estoque: saldo derivado, lotes, validade, entradas, saídas, quantidade restante e auditoria.  
   - Dependências: P3-06; P3-16; P4-05.
-- [ ] **P5-04** Implementar consumo FEFO: selecionar primeiro os lotes não vencidos com menor data de validade e impedir consumo de lote vencido.  
+- [x] **P5-04** Implementar consumo FEFO: selecionar primeiro os lotes não vencidos com menor data de validade e impedir consumo de lote vencido.  
   - Dependências: P5-03.
-- [ ] **P5-05** Implementar service de pedidos com captura de preços vigentes, cálculo Decimal de subtotais/total e validação de estoque.  
+- [x] **P5-05** Implementar service de pedidos com captura de preços vigentes, cálculo Decimal de subtotais/total e validação de estoque.  
   - Dependências: P3-10; P3-11; P5-03; P5-04.
-- [ ] **P5-06** Garantir transação atômica do pedido, itens e baixas de estoque, com rollback integral em falha.  
+- [x] **P5-06** Garantir transação atômica do pedido, itens e baixas de estoque, com rollback integral em falha.  
   - Dependências: P5-05.
-- [ ] **P5-07** Implementar cancelamento: alterar status, registrar data/usuário/observação conforme contrato e não repor estoque automaticamente.  
+- [x] **P5-07** Implementar cancelamento: alterar status, registrar data/usuário/observação conforme contrato e não repor estoque automaticamente.  
   - Dependências: P5-05; P5-06.
-- [ ] **P5-08** Implementar service de recomendações e integração em `integrations/optimizer.py` para solver de Programação Linear Inteira.  
+- [x] **P5-08** Implementar service de recomendações e integração em `integrations/optimizer.py` para solver de Programação Linear Inteira.  
   - Dependências: P3-05; P3-07; P3-08; P5-01.
-- [ ] **P5-09** Implementar recomendação de produção maximizando lucro estimado, com quantidades inteiras e estoque válido, conforme SPEC.md.  
+- [x] **P5-09** Implementar recomendação de produção maximizando lucro estimado, com quantidades inteiras e estoque válido, conforme SPEC.md.  
   - Dependências: P5-08; P5-03; P5-04.
-- [ ] **P5-10** Implementar recomendação de reposição sob período e orçamento informados, sem persistir histórico.  
+- [x] **P5-10** Implementar recomendação de reposição sob período e orçamento informados, sem persistir histórico.  
   - Dependências: P5-08; P5-03.
-- [ ] **P5-11** Mapear indisponibilidade do solver/dependência para `503` com `ApiError` quando aplicável.  
+- [x] **P5-11** Mapear indisponibilidade do solver/dependência para `503` com `ApiError` quando aplicável.  
   - Dependências: P5-08; P4-15.
-- [ ] **P5-12** Implementar alertas de reposição usando saldo válido abaixo da quantidade mínima.  
+- [x] **P5-12** Implementar alertas de reposição usando saldo válido abaixo da quantidade mínima.  
   - Dependências: P5-03.
-- [ ] **P5-13** Implementar alertas de validade a partir de lotes com validade, classificando próximos do vencimento e vencidos.  
+- [x] **P5-13** Implementar alertas de validade a partir de lotes com validade, classificando próximos do vencimento e vencidos.  
   - Dependências: P5-03; P5-04.
-- [ ] **P5-14** Implementar sugestões de marketing informativas sob demanda, sem publicação automática nem persistência de histórico.  
+- [x] **P5-14** Implementar sugestões de marketing informativas sob demanda, sem publicação automática nem persistência de histórico.  
   - Dependências: P5-01.
-- [ ] **P5-15** Implementar dashboard por período, considerando apenas pedidos `ATIVO` nos indicadores financeiros e ranking.  
+- [x] **P5-15** Implementar dashboard por período, considerando apenas pedidos `ATIVO` nos indicadores financeiros e ranking.  
   - Dependências: P3-10; P3-11; P5-05; P5-07; P5-12; P5-13.
-- [ ] **P5-16** Implementar exportação CSV UTF-8 com as mesmas regras de período e inclusão de pedidos ativos; responder como `text/csv`, não JSON.  
+- [x] **P5-16** Implementar exportação CSV UTF-8 com as mesmas regras de período e inclusão de pedidos ativos; responder como `text/csv`, não JSON.  
   - Dependências: P5-15; P2-61.
-- [ ] **P5-17** Definir consultas paginadas e filtros individualmente conforme parâmetros de cada operação; não aplicar filtros globais não contratados.  
+- [x] **P5-17** Definir consultas paginadas e filtros individualmente conforme parâmetros de cada operação; não aplicar filtros globais não contratados.  
   - Dependências: P2-57; P3-18.
-- [ ] **P5-18** Definir ordenação `sort` com lista permitida por recurso, respeitando o formato `campo,direção` e sem interpolar SQL não confiável.  
+- [x] **P5-18** Definir ordenação `sort` com lista permitida por recurso, respeitando o formato `campo,direção` e sem interpolar SQL não confiável.  
   - Dependências: P5-17.
-- [ ] **P5-19** Planejar carregamento com `selectinload`/`joinedload` nas relações retornadas e verificar ausência de N+1.  
+- [x] **P5-19** Planejar carregamento com `selectinload`/`joinedload` nas relações retornadas e verificar ausência de N+1.  
   - Dependências: P3-12; P5-01.
-- [ ] **P5-20** Implementar `GET /api/v1/saude` — `consultarSaude` — preservando parâmetros, request body, status/respostas, headers, media types e `security` exatamente como definidos no OpenAPI.  
+- [x] **P5-20** Implementar `GET /api/v1/saude` — `consultarSaude` — preservando parâmetros, request body, status/respostas, headers, media types e `security` exatamente como definidos no OpenAPI.  
+  - Evidência: registrada uma única vez; `operationId`, tags, parâmetros, corpo, status, media types, headers e `security` conferidos contra o contrato por `verify_api.py` (blocos [1] a [4]).
   - Dependências: P5-01 a P5-19; P2-57; P4-07.
-- [ ] **P5-21** Implementar `POST /api/v1/auth/administrador` — `criarContaAdministrador` — preservando parâmetros, request body, status/respostas, headers, media types e `security` exatamente como definidos no OpenAPI.  
+- [x] **P5-21** Implementar `POST /api/v1/auth/administrador` — `criarContaAdministrador` — preservando parâmetros, request body, status/respostas, headers, media types e `security` exatamente como definidos no OpenAPI.  
+  - Evidência: registrada uma única vez; `operationId`, tags, parâmetros, corpo, status, media types, headers e `security` conferidos contra o contrato por `verify_api.py` (blocos [1] a [4]).
   - Dependências: P5-01 a P5-19; P2-57; P4-07.
-- [ ] **P5-22** Implementar `POST /api/v1/auth/login` — `autenticarUsuario` — preservando parâmetros, request body, status/respostas, headers, media types e `security` exatamente como definidos no OpenAPI.  
+- [x] **P5-22** Implementar `POST /api/v1/auth/login` — `autenticarUsuario` — preservando parâmetros, request body, status/respostas, headers, media types e `security` exatamente como definidos no OpenAPI.  
+  - Evidência: registrada uma única vez; `operationId`, tags, parâmetros, corpo, status, media types, headers e `security` conferidos contra o contrato por `verify_api.py` (blocos [1] a [4]).
   - Dependências: P5-01 a P5-19; P2-57; P4-07.
-- [ ] **P5-23** Implementar `GET /api/v1/usuarios` — `listarUsuarios` — preservando parâmetros, request body, status/respostas, headers, media types e `security` exatamente como definidos no OpenAPI.  
+- [x] **P5-23** Implementar `GET /api/v1/usuarios` — `listarUsuarios` — preservando parâmetros, request body, status/respostas, headers, media types e `security` exatamente como definidos no OpenAPI.  
+  - Evidência: registrada uma única vez; `operationId`, tags, parâmetros, corpo, status, media types, headers e `security` conferidos contra o contrato por `verify_api.py` (blocos [1] a [4]).
   - Dependências: P5-01 a P5-19; P2-57; P4-07.
-- [ ] **P5-24** Implementar `POST /api/v1/usuarios` — `cadastrarFuncionario` — preservando parâmetros, request body, status/respostas, headers, media types e `security` exatamente como definidos no OpenAPI.  
+- [x] **P5-24** Implementar `POST /api/v1/usuarios` — `cadastrarFuncionario` — preservando parâmetros, request body, status/respostas, headers, media types e `security` exatamente como definidos no OpenAPI.  
+  - Evidência: registrada uma única vez; `operationId`, tags, parâmetros, corpo, status, media types, headers e `security` conferidos contra o contrato por `verify_api.py` (blocos [1] a [4]).
   - Dependências: P5-01 a P5-19; P2-57; P4-07.
-- [ ] **P5-25** Implementar `GET /api/v1/usuarios/{id}` — `consultarUsuario` — preservando parâmetros, request body, status/respostas, headers, media types e `security` exatamente como definidos no OpenAPI.  
+- [x] **P5-25** Implementar `GET /api/v1/usuarios/{id}` — `consultarUsuario` — preservando parâmetros, request body, status/respostas, headers, media types e `security` exatamente como definidos no OpenAPI.  
+  - Evidência: registrada uma única vez; `operationId`, tags, parâmetros, corpo, status, media types, headers e `security` conferidos contra o contrato por `verify_api.py` (blocos [1] a [4]).
   - Dependências: P5-01 a P5-19; P2-57; P4-07.
-- [ ] **P5-26** Implementar `PATCH /api/v1/usuarios/{id}` — `atualizarUsuario` — preservando parâmetros, request body, status/respostas, headers, media types e `security` exatamente como definidos no OpenAPI.  
+- [x] **P5-26** Implementar `PATCH /api/v1/usuarios/{id}` — `atualizarUsuario` — preservando parâmetros, request body, status/respostas, headers, media types e `security` exatamente como definidos no OpenAPI.  
+  - Evidência: registrada uma única vez; `operationId`, tags, parâmetros, corpo, status, media types, headers e `security` conferidos contra o contrato por `verify_api.py` (blocos [1] a [4]).
   - Dependências: P5-01 a P5-19; P2-57; P4-07.
-- [ ] **P5-27** Implementar `DELETE /api/v1/usuarios/{id}` — `desativarUsuario` — preservando parâmetros, request body, status/respostas, headers, media types e `security` exatamente como definidos no OpenAPI.  
+- [x] **P5-27** Implementar `DELETE /api/v1/usuarios/{id}` — `desativarUsuario` — preservando parâmetros, request body, status/respostas, headers, media types e `security` exatamente como definidos no OpenAPI.  
+  - Evidência: registrada uma única vez; `operationId`, tags, parâmetros, corpo, status, media types, headers e `security` conferidos contra o contrato por `verify_api.py` (blocos [1] a [4]).
   - Dependências: P5-01 a P5-19; P2-57; P4-07.
-- [ ] **P5-28** Implementar `GET /api/v1/clientes` — `listarClientes` — preservando parâmetros, request body, status/respostas, headers, media types e `security` exatamente como definidos no OpenAPI.  
+- [x] **P5-28** Implementar `GET /api/v1/clientes` — `listarClientes` — preservando parâmetros, request body, status/respostas, headers, media types e `security` exatamente como definidos no OpenAPI.  
+  - Evidência: registrada uma única vez; `operationId`, tags, parâmetros, corpo, status, media types, headers e `security` conferidos contra o contrato por `verify_api.py` (blocos [1] a [4]).
   - Dependências: P5-01 a P5-19; P2-57; P4-07.
-- [ ] **P5-29** Implementar `POST /api/v1/clientes` — `cadastrarCliente` — preservando parâmetros, request body, status/respostas, headers, media types e `security` exatamente como definidos no OpenAPI.  
+- [x] **P5-29** Implementar `POST /api/v1/clientes` — `cadastrarCliente` — preservando parâmetros, request body, status/respostas, headers, media types e `security` exatamente como definidos no OpenAPI.  
+  - Evidência: registrada uma única vez; `operationId`, tags, parâmetros, corpo, status, media types, headers e `security` conferidos contra o contrato por `verify_api.py` (blocos [1] a [4]).
   - Dependências: P5-01 a P5-19; P2-57; P4-07.
-- [ ] **P5-30** Implementar `GET /api/v1/clientes/{id}` — `consultarCliente` — preservando parâmetros, request body, status/respostas, headers, media types e `security` exatamente como definidos no OpenAPI.  
+- [x] **P5-30** Implementar `GET /api/v1/clientes/{id}` — `consultarCliente` — preservando parâmetros, request body, status/respostas, headers, media types e `security` exatamente como definidos no OpenAPI.  
+  - Evidência: registrada uma única vez; `operationId`, tags, parâmetros, corpo, status, media types, headers e `security` conferidos contra o contrato por `verify_api.py` (blocos [1] a [4]).
   - Dependências: P5-01 a P5-19; P2-57; P4-07.
-- [ ] **P5-31** Implementar `PUT /api/v1/clientes/{id}` — `atualizarCliente` — preservando parâmetros, request body, status/respostas, headers, media types e `security` exatamente como definidos no OpenAPI.  
+- [x] **P5-31** Implementar `PUT /api/v1/clientes/{id}` — `atualizarCliente` — preservando parâmetros, request body, status/respostas, headers, media types e `security` exatamente como definidos no OpenAPI.  
+  - Evidência: registrada uma única vez; `operationId`, tags, parâmetros, corpo, status, media types, headers e `security` conferidos contra o contrato por `verify_api.py` (blocos [1] a [4]).
   - Dependências: P5-01 a P5-19; P2-57; P4-07.
-- [ ] **P5-32** Implementar `DELETE /api/v1/clientes/{id}` — `excluirCliente` — preservando parâmetros, request body, status/respostas, headers, media types e `security` exatamente como definidos no OpenAPI.  
+- [x] **P5-32** Implementar `DELETE /api/v1/clientes/{id}` — `excluirCliente` — preservando parâmetros, request body, status/respostas, headers, media types e `security` exatamente como definidos no OpenAPI.  
+  - Evidência: registrada uma única vez; `operationId`, tags, parâmetros, corpo, status, media types, headers e `security` conferidos contra o contrato por `verify_api.py` (blocos [1] a [4]).
   - Dependências: P5-01 a P5-19; P2-57; P4-07.
-- [ ] **P5-33** Implementar `GET /api/v1/unidades-medida` — `listarUnidadesMedida` — preservando parâmetros, request body, status/respostas, headers, media types e `security` exatamente como definidos no OpenAPI.  
+- [x] **P5-33** Implementar `GET /api/v1/unidades-medida` — `listarUnidadesMedida` — preservando parâmetros, request body, status/respostas, headers, media types e `security` exatamente como definidos no OpenAPI.  
+  - Evidência: registrada uma única vez; `operationId`, tags, parâmetros, corpo, status, media types, headers e `security` conferidos contra o contrato por `verify_api.py` (blocos [1] a [4]).
   - Dependências: P5-01 a P5-19; P2-57; P4-07.
-- [ ] **P5-34** Implementar `POST /api/v1/unidades-medida` — `cadastrarUnidadeMedida` — preservando parâmetros, request body, status/respostas, headers, media types e `security` exatamente como definidos no OpenAPI.  
+- [x] **P5-34** Implementar `POST /api/v1/unidades-medida` — `cadastrarUnidadeMedida` — preservando parâmetros, request body, status/respostas, headers, media types e `security` exatamente como definidos no OpenAPI.  
+  - Evidência: registrada uma única vez; `operationId`, tags, parâmetros, corpo, status, media types, headers e `security` conferidos contra o contrato por `verify_api.py` (blocos [1] a [4]).
   - Dependências: P5-01 a P5-19; P2-57; P4-07.
-- [ ] **P5-35** Implementar `GET /api/v1/unidades-medida/{unidadeMedida}` — `consultarUnidadeMedida` — preservando parâmetros, request body, status/respostas, headers, media types e `security` exatamente como definidos no OpenAPI.  
+- [x] **P5-35** Implementar `GET /api/v1/unidades-medida/{unidadeMedida}` — `consultarUnidadeMedida` — preservando parâmetros, request body, status/respostas, headers, media types e `security` exatamente como definidos no OpenAPI.  
+  - Evidência: registrada uma única vez; `operationId`, tags, parâmetros, corpo, status, media types, headers e `security` conferidos contra o contrato por `verify_api.py` (blocos [1] a [4]).
   - Dependências: P5-01 a P5-19; P2-57; P4-07.
-- [ ] **P5-36** Implementar `PUT /api/v1/unidades-medida/{unidadeMedida}` — `atualizarUnidadeMedida` — preservando parâmetros, request body, status/respostas, headers, media types e `security` exatamente como definidos no OpenAPI.  
+- [x] **P5-36** Implementar `PUT /api/v1/unidades-medida/{unidadeMedida}` — `atualizarUnidadeMedida` — preservando parâmetros, request body, status/respostas, headers, media types e `security` exatamente como definidos no OpenAPI.  
+  - Evidência: registrada uma única vez; `operationId`, tags, parâmetros, corpo, status, media types, headers e `security` conferidos contra o contrato por `verify_api.py` (blocos [1] a [4]).
   - Dependências: P5-01 a P5-19; P2-57; P4-07.
-- [ ] **P5-37** Implementar `DELETE /api/v1/unidades-medida/{unidadeMedida}` — `excluirUnidadeMedida` — preservando parâmetros, request body, status/respostas, headers, media types e `security` exatamente como definidos no OpenAPI.  
+- [x] **P5-37** Implementar `DELETE /api/v1/unidades-medida/{unidadeMedida}` — `excluirUnidadeMedida` — preservando parâmetros, request body, status/respostas, headers, media types e `security` exatamente como definidos no OpenAPI.  
+  - Evidência: registrada uma única vez; `operationId`, tags, parâmetros, corpo, status, media types, headers e `security` conferidos contra o contrato por `verify_api.py` (blocos [1] a [4]).
   - Dependências: P5-01 a P5-19; P2-57; P4-07.
-- [ ] **P5-38** Implementar `GET /api/v1/ingredientes` — `listarIngredientes` — preservando parâmetros, request body, status/respostas, headers, media types e `security` exatamente como definidos no OpenAPI.  
+- [x] **P5-38** Implementar `GET /api/v1/ingredientes` — `listarIngredientes` — preservando parâmetros, request body, status/respostas, headers, media types e `security` exatamente como definidos no OpenAPI.  
+  - Evidência: registrada uma única vez; `operationId`, tags, parâmetros, corpo, status, media types, headers e `security` conferidos contra o contrato por `verify_api.py` (blocos [1] a [4]).
   - Dependências: P5-01 a P5-19; P2-57; P4-07.
-- [ ] **P5-39** Implementar `POST /api/v1/ingredientes` — `cadastrarIngrediente` — preservando parâmetros, request body, status/respostas, headers, media types e `security` exatamente como definidos no OpenAPI.  
+- [x] **P5-39** Implementar `POST /api/v1/ingredientes` — `cadastrarIngrediente` — preservando parâmetros, request body, status/respostas, headers, media types e `security` exatamente como definidos no OpenAPI.  
+  - Evidência: registrada uma única vez; `operationId`, tags, parâmetros, corpo, status, media types, headers e `security` conferidos contra o contrato por `verify_api.py` (blocos [1] a [4]).
   - Dependências: P5-01 a P5-19; P2-57; P4-07.
-- [ ] **P5-40** Implementar `GET /api/v1/ingredientes/{id}` — `consultarIngrediente` — preservando parâmetros, request body, status/respostas, headers, media types e `security` exatamente como definidos no OpenAPI.  
+- [x] **P5-40** Implementar `GET /api/v1/ingredientes/{id}` — `consultarIngrediente` — preservando parâmetros, request body, status/respostas, headers, media types e `security` exatamente como definidos no OpenAPI.  
+  - Evidência: registrada uma única vez; `operationId`, tags, parâmetros, corpo, status, media types, headers e `security` conferidos contra o contrato por `verify_api.py` (blocos [1] a [4]).
   - Dependências: P5-01 a P5-19; P2-57; P4-07.
-- [ ] **P5-41** Implementar `PUT /api/v1/ingredientes/{id}` — `atualizarIngrediente` — preservando parâmetros, request body, status/respostas, headers, media types e `security` exatamente como definidos no OpenAPI.  
+- [x] **P5-41** Implementar `PUT /api/v1/ingredientes/{id}` — `atualizarIngrediente` — preservando parâmetros, request body, status/respostas, headers, media types e `security` exatamente como definidos no OpenAPI.  
+  - Evidência: registrada uma única vez; `operationId`, tags, parâmetros, corpo, status, media types, headers e `security` conferidos contra o contrato por `verify_api.py` (blocos [1] a [4]).
   - Dependências: P5-01 a P5-19; P2-57; P4-07.
-- [ ] **P5-42** Implementar `DELETE /api/v1/ingredientes/{id}` — `excluirIngrediente` — preservando parâmetros, request body, status/respostas, headers, media types e `security` exatamente como definidos no OpenAPI.  
+- [x] **P5-42** Implementar `DELETE /api/v1/ingredientes/{id}` — `excluirIngrediente` — preservando parâmetros, request body, status/respostas, headers, media types e `security` exatamente como definidos no OpenAPI.  
+  - Evidência: registrada uma única vez; `operationId`, tags, parâmetros, corpo, status, media types, headers e `security` conferidos contra o contrato por `verify_api.py` (blocos [1] a [4]).
   - Dependências: P5-01 a P5-19; P2-57; P4-07.
-- [ ] **P5-43** Implementar `GET /api/v1/ingredientes/{id}/movimentacoes` — `listarMovimentacoesDoIngrediente` — preservando parâmetros, request body, status/respostas, headers, media types e `security` exatamente como definidos no OpenAPI.  
+- [x] **P5-43** Implementar `GET /api/v1/ingredientes/{id}/movimentacoes` — `listarMovimentacoesDoIngrediente` — preservando parâmetros, request body, status/respostas, headers, media types e `security` exatamente como definidos no OpenAPI.  
+  - Evidência: registrada uma única vez; `operationId`, tags, parâmetros, corpo, status, media types, headers e `security` conferidos contra o contrato por `verify_api.py` (blocos [1] a [4]).
   - Dependências: P5-01 a P5-19; P2-57; P4-07.
-- [ ] **P5-44** Implementar `GET /api/v1/movimentacoes-estoque` — `listarMovimentacoesEstoque` — preservando parâmetros, request body, status/respostas, headers, media types e `security` exatamente como definidos no OpenAPI.  
+- [x] **P5-44** Implementar `GET /api/v1/movimentacoes-estoque` — `listarMovimentacoesEstoque` — preservando parâmetros, request body, status/respostas, headers, media types e `security` exatamente como definidos no OpenAPI.  
+  - Evidência: registrada uma única vez; `operationId`, tags, parâmetros, corpo, status, media types, headers e `security` conferidos contra o contrato por `verify_api.py` (blocos [1] a [4]).
   - Dependências: P5-01 a P5-19; P2-57; P4-07.
-- [ ] **P5-45** Implementar `POST /api/v1/movimentacoes-estoque` — `registrarMovimentacaoEstoque` — preservando parâmetros, request body, status/respostas, headers, media types e `security` exatamente como definidos no OpenAPI.  
+- [x] **P5-45** Implementar `POST /api/v1/movimentacoes-estoque` — `registrarMovimentacaoEstoque` — preservando parâmetros, request body, status/respostas, headers, media types e `security` exatamente como definidos no OpenAPI.  
+  - Evidência: registrada uma única vez; `operationId`, tags, parâmetros, corpo, status, media types, headers e `security` conferidos contra o contrato por `verify_api.py` (blocos [1] a [4]).
   - Dependências: P5-01 a P5-19; P2-57; P4-07.
-- [ ] **P5-46** Implementar `GET /api/v1/produtos` — `listarProdutos` — preservando parâmetros, request body, status/respostas, headers, media types e `security` exatamente como definidos no OpenAPI.  
+- [x] **P5-46** Implementar `GET /api/v1/produtos` — `listarProdutos` — preservando parâmetros, request body, status/respostas, headers, media types e `security` exatamente como definidos no OpenAPI.  
+  - Evidência: registrada uma única vez; `operationId`, tags, parâmetros, corpo, status, media types, headers e `security` conferidos contra o contrato por `verify_api.py` (blocos [1] a [4]).
   - Dependências: P5-01 a P5-19; P2-57; P4-07.
-- [ ] **P5-47** Implementar `POST /api/v1/produtos` — `cadastrarProduto` — preservando parâmetros, request body, status/respostas, headers, media types e `security` exatamente como definidos no OpenAPI.  
+- [x] **P5-47** Implementar `POST /api/v1/produtos` — `cadastrarProduto` — preservando parâmetros, request body, status/respostas, headers, media types e `security` exatamente como definidos no OpenAPI.  
+  - Evidência: registrada uma única vez; `operationId`, tags, parâmetros, corpo, status, media types, headers e `security` conferidos contra o contrato por `verify_api.py` (blocos [1] a [4]).
   - Dependências: P5-01 a P5-19; P2-57; P4-07.
-- [ ] **P5-48** Implementar `GET /api/v1/produtos/{id}` — `consultarProduto` — preservando parâmetros, request body, status/respostas, headers, media types e `security` exatamente como definidos no OpenAPI.  
+- [x] **P5-48** Implementar `GET /api/v1/produtos/{id}` — `consultarProduto` — preservando parâmetros, request body, status/respostas, headers, media types e `security` exatamente como definidos no OpenAPI.  
+  - Evidência: registrada uma única vez; `operationId`, tags, parâmetros, corpo, status, media types, headers e `security` conferidos contra o contrato por `verify_api.py` (blocos [1] a [4]).
   - Dependências: P5-01 a P5-19; P2-57; P4-07.
-- [ ] **P5-49** Implementar `PUT /api/v1/produtos/{id}` — `atualizarProduto` — preservando parâmetros, request body, status/respostas, headers, media types e `security` exatamente como definidos no OpenAPI.  
+- [x] **P5-49** Implementar `PUT /api/v1/produtos/{id}` — `atualizarProduto` — preservando parâmetros, request body, status/respostas, headers, media types e `security` exatamente como definidos no OpenAPI.  
+  - Evidência: registrada uma única vez; `operationId`, tags, parâmetros, corpo, status, media types, headers e `security` conferidos contra o contrato por `verify_api.py` (blocos [1] a [4]).
   - Dependências: P5-01 a P5-19; P2-57; P4-07.
-- [ ] **P5-50** Implementar `DELETE /api/v1/produtos/{id}` — `desativarProduto` — preservando parâmetros, request body, status/respostas, headers, media types e `security` exatamente como definidos no OpenAPI.  
+- [x] **P5-50** Implementar `DELETE /api/v1/produtos/{id}` — `desativarProduto` — preservando parâmetros, request body, status/respostas, headers, media types e `security` exatamente como definidos no OpenAPI.  
+  - Evidência: registrada uma única vez; `operationId`, tags, parâmetros, corpo, status, media types, headers e `security` conferidos contra o contrato por `verify_api.py` (blocos [1] a [4]).
   - Dependências: P5-01 a P5-19; P2-57; P4-07.
-- [ ] **P5-51** Implementar `GET /api/v1/produtos/{id}/composicao` — `consultarComposicaoProduto` — preservando parâmetros, request body, status/respostas, headers, media types e `security` exatamente como definidos no OpenAPI.  
+- [x] **P5-51** Implementar `GET /api/v1/produtos/{id}/composicao` — `consultarComposicaoProduto` — preservando parâmetros, request body, status/respostas, headers, media types e `security` exatamente como definidos no OpenAPI.  
+  - Evidência: registrada uma única vez; `operationId`, tags, parâmetros, corpo, status, media types, headers e `security` conferidos contra o contrato por `verify_api.py` (blocos [1] a [4]).
   - Dependências: P5-01 a P5-19; P2-57; P4-07.
-- [ ] **P5-52** Implementar `PUT /api/v1/produtos/{id}/composicao` — `substituirComposicaoProduto` — preservando parâmetros, request body, status/respostas, headers, media types e `security` exatamente como definidos no OpenAPI.  
+- [x] **P5-52** Implementar `PUT /api/v1/produtos/{id}/composicao` — `substituirComposicaoProduto` — preservando parâmetros, request body, status/respostas, headers, media types e `security` exatamente como definidos no OpenAPI.  
+  - Evidência: registrada uma única vez; `operationId`, tags, parâmetros, corpo, status, media types, headers e `security` conferidos contra o contrato por `verify_api.py` (blocos [1] a [4]).
   - Dependências: P5-01 a P5-19; P2-57; P4-07.
-- [ ] **P5-53** Implementar `GET /api/v1/pedidos` — `listarPedidos` — preservando parâmetros, request body, status/respostas, headers, media types e `security` exatamente como definidos no OpenAPI.  
+- [x] **P5-53** Implementar `GET /api/v1/pedidos` — `listarPedidos` — preservando parâmetros, request body, status/respostas, headers, media types e `security` exatamente como definidos no OpenAPI.  
+  - Evidência: registrada uma única vez; `operationId`, tags, parâmetros, corpo, status, media types, headers e `security` conferidos contra o contrato por `verify_api.py` (blocos [1] a [4]).
   - Dependências: P5-01 a P5-19; P2-57; P4-07.
-- [ ] **P5-54** Implementar `POST /api/v1/pedidos` — `registrarPedido` — preservando parâmetros, request body, status/respostas, headers, media types e `security` exatamente como definidos no OpenAPI.  
+- [x] **P5-54** Implementar `POST /api/v1/pedidos` — `registrarPedido` — preservando parâmetros, request body, status/respostas, headers, media types e `security` exatamente como definidos no OpenAPI.  
+  - Evidência: registrada uma única vez; `operationId`, tags, parâmetros, corpo, status, media types, headers e `security` conferidos contra o contrato por `verify_api.py` (blocos [1] a [4]).
   - Dependências: P5-01 a P5-19; P2-57; P4-07.
-- [ ] **P5-55** Implementar `GET /api/v1/pedidos/{id}` — `consultarPedido` — preservando parâmetros, request body, status/respostas, headers, media types e `security` exatamente como definidos no OpenAPI.  
+- [x] **P5-55** Implementar `GET /api/v1/pedidos/{id}` — `consultarPedido` — preservando parâmetros, request body, status/respostas, headers, media types e `security` exatamente como definidos no OpenAPI.  
+  - Evidência: registrada uma única vez; `operationId`, tags, parâmetros, corpo, status, media types, headers e `security` conferidos contra o contrato por `verify_api.py` (blocos [1] a [4]).
   - Dependências: P5-01 a P5-19; P2-57; P4-07.
-- [ ] **P5-56** Implementar `POST /api/v1/pedidos/{id}/cancelamento` — `cancelarPedido` — preservando parâmetros, request body, status/respostas, headers, media types e `security` exatamente como definidos no OpenAPI.  
+- [x] **P5-56** Implementar `POST /api/v1/pedidos/{id}/cancelamento` — `cancelarPedido` — preservando parâmetros, request body, status/respostas, headers, media types e `security` exatamente como definidos no OpenAPI.  
+  - Evidência: registrada uma única vez; `operationId`, tags, parâmetros, corpo, status, media types, headers e `security` conferidos contra o contrato por `verify_api.py` (blocos [1] a [4]).
   - Dependências: P5-01 a P5-19; P2-57; P4-07.
-- [ ] **P5-57** Implementar `GET /api/v1/alertas/reposicao` — `listarAlertasReposicao` — preservando parâmetros, request body, status/respostas, headers, media types e `security` exatamente como definidos no OpenAPI.  
+- [x] **P5-57** Implementar `GET /api/v1/alertas/reposicao` — `listarAlertasReposicao` — preservando parâmetros, request body, status/respostas, headers, media types e `security` exatamente como definidos no OpenAPI.  
+  - Evidência: registrada uma única vez; `operationId`, tags, parâmetros, corpo, status, media types, headers e `security` conferidos contra o contrato por `verify_api.py` (blocos [1] a [4]).
   - Dependências: P5-01 a P5-19; P2-57; P4-07.
-- [ ] **P5-58** Implementar `GET /api/v1/alertas/validade` — `listarAlertasValidade` — preservando parâmetros, request body, status/respostas, headers, media types e `security` exatamente como definidos no OpenAPI.  
+- [x] **P5-58** Implementar `GET /api/v1/alertas/validade` — `listarAlertasValidade` — preservando parâmetros, request body, status/respostas, headers, media types e `security` exatamente como definidos no OpenAPI.  
+  - Evidência: registrada uma única vez; `operationId`, tags, parâmetros, corpo, status, media types, headers e `security` conferidos contra o contrato por `verify_api.py` (blocos [1] a [4]).
   - Dependências: P5-01 a P5-19; P2-57; P4-07.
-- [ ] **P5-59** Implementar `POST /api/v1/recomendacoes/producao` — `calcularRecomendacaoProducao` — preservando parâmetros, request body, status/respostas, headers, media types e `security` exatamente como definidos no OpenAPI.  
+- [x] **P5-59** Implementar `POST /api/v1/recomendacoes/producao` — `calcularRecomendacaoProducao` — preservando parâmetros, request body, status/respostas, headers, media types e `security` exatamente como definidos no OpenAPI.  
+  - Evidência: registrada uma única vez; `operationId`, tags, parâmetros, corpo, status, media types, headers e `security` conferidos contra o contrato por `verify_api.py` (blocos [1] a [4]).
   - Dependências: P5-01 a P5-19; P2-57; P4-07.
-- [ ] **P5-60** Implementar `POST /api/v1/recomendacoes/reposicao` — `calcularRecomendacaoReposicao` — preservando parâmetros, request body, status/respostas, headers, media types e `security` exatamente como definidos no OpenAPI.  
+- [x] **P5-60** Implementar `POST /api/v1/recomendacoes/reposicao` — `calcularRecomendacaoReposicao` — preservando parâmetros, request body, status/respostas, headers, media types e `security` exatamente como definidos no OpenAPI.  
+  - Evidência: registrada uma única vez; `operationId`, tags, parâmetros, corpo, status, media types, headers e `security` conferidos contra o contrato por `verify_api.py` (blocos [1] a [4]).
   - Dependências: P5-01 a P5-19; P2-57; P4-07.
-- [ ] **P5-61** Implementar `POST /api/v1/sugestoes-marketing` — `gerarSugestoesMarketing` — preservando parâmetros, request body, status/respostas, headers, media types e `security` exatamente como definidos no OpenAPI.  
+- [x] **P5-61** Implementar `POST /api/v1/sugestoes-marketing` — `gerarSugestoesMarketing` — preservando parâmetros, request body, status/respostas, headers, media types e `security` exatamente como definidos no OpenAPI.  
+  - Evidência: registrada uma única vez; `operationId`, tags, parâmetros, corpo, status, media types, headers e `security` conferidos contra o contrato por `verify_api.py` (blocos [1] a [4]).
   - Dependências: P5-01 a P5-19; P2-57; P4-07.
-- [ ] **P5-62** Implementar `GET /api/v1/dashboard` — `consultarDashboard` — preservando parâmetros, request body, status/respostas, headers, media types e `security` exatamente como definidos no OpenAPI.  
+- [x] **P5-62** Implementar `GET /api/v1/dashboard` — `consultarDashboard` — preservando parâmetros, request body, status/respostas, headers, media types e `security` exatamente como definidos no OpenAPI.  
+  - Evidência: registrada uma única vez; `operationId`, tags, parâmetros, corpo, status, media types, headers e `security` conferidos contra o contrato por `verify_api.py` (blocos [1] a [4]).
   - Dependências: P5-01 a P5-19; P2-57; P4-07.
-- [ ] **P5-63** Implementar `GET /api/v1/dashboard/exportacao` — `exportarDashboardCsv` — preservando parâmetros, request body, status/respostas, headers, media types e `security` exatamente como definidos no OpenAPI.  
+- [x] **P5-63** Implementar `GET /api/v1/dashboard/exportacao` — `exportarDashboardCsv` — preservando parâmetros, request body, status/respostas, headers, media types e `security` exatamente como definidos no OpenAPI.  
+  - Evidência: registrada uma única vez; `operationId`, tags, parâmetros, corpo, status, media types, headers e `security` conferidos contra o contrato por `verify_api.py` (blocos [1] a [4]).
   - Dependências: P5-01 a P5-19; P2-57; P4-07.
-- [ ] **P5-64** Criar routers por domínio: `saude.py`, `auth.py`, `usuarios.py`, `clientes.py`, `unidades_medida.py`, `ingredientes.py`, `movimentacoes_estoque.py`, `produtos.py`, `pedidos.py`, `alertas.py`, `recomendacoes.py`, `sugestoes_marketing.py` e `dashboard.py`.  
+- [x] **P5-64** Criar routers por domínio: `saude.py`, `auth.py`, `usuarios.py`, `clientes.py`, `unidades_medida.py`, `ingredientes.py`, `movimentacoes_estoque.py`, `produtos.py`, `pedidos.py`, `alertas.py`, `recomendacoes.py`, `sugestoes_marketing.py` e `dashboard.py`.  
   - Dependências: P5-01 a P5-63.
-- [ ] **P5-65** Registrar todos os routers no `main.py` sob o prefixo `/api/v1`, mantendo a rota pública de saúde e as rotas públicas de autenticação.  
+- [x] **P5-65** Registrar todos os routers no `main.py` sob o prefixo `/api/v1`, mantendo a rota pública de saúde e as rotas públicas de autenticação.  
   - Dependências: P1-15; P5-64.
-- [ ] **P5-66** Conferir que os 26 path keys e as 44 operações HTTP estão registrados uma única vez, com `operationId` e tags corretos.  
+- [x] **P5-66** Conferir que os 26 path keys e as 44 operações HTTP estão registrados uma única vez, com `operationId` e tags corretos.  
   - Dependências: P5-20 a P5-65.
-- [ ] **P5-67** Conferir status e corpo de todas as respostas, incluindo `204` sem corpo, `201` e header `Location` quando declarado, CSV e `503`.  
+- [x] **P5-67** Conferir status e corpo de todas as respostas, incluindo `204` sem corpo, `201` e header `Location` quando declarado, CSV e `503`.  
   - Dependências: P5-20 a P5-66.
-- [ ] **P5-68** Conferir a matriz de autenticação e RBAC final contra cada operação OpenAPI, sem criar endpoints adicionais (incluindo `/auth/me`).  
+- [x] **P5-68** Conferir a matriz de autenticação e RBAC final contra cada operação OpenAPI, sem criar endpoints adicionais (incluindo `/auth/me`).  
   - Dependências: P4-07; P5-20 a P5-66.
 
 ### Critérios de aceite
 
-- [ ] Services separam domínio/HTTP e cobrem estoque, FEFO, pedidos, recomendações, alertas, marketing, dashboard e CSV.
-- [ ] As 44 operações dos 26 caminhos estão implementadas com operationId, parâmetros, schemas, respostas e security do OpenAPI.
-- [ ] Pedido e baixas são atômicos; cancelamento não repõe estoque; preços históricos são preservados.
-- [ ] Todos os routers estão registrados; carregamento evita N+1; indisponibilidade de solver resulta em 503 quando aplicável.
+- [x] Services separam domínio/HTTP e cobrem estoque, FEFO, pedidos, recomendações, alertas, marketing, dashboard e CSV.
+- [x] As 44 operações dos 26 caminhos estão implementadas com operationId, parâmetros, schemas, respostas e security do OpenAPI.
+- [x] Pedido e baixas são atômicos; cancelamento não repõe estoque; preços históricos são preservados.
+- [x] Todos os routers estão registrados; carregamento evita N+1; indisponibilidade de solver resulta em 503 quando aplicável.
+
+### Decisões da Fase 5 a validar na revisão humana
+
+1. **Dois módulos além da estrutura do STYLEGUIDE** (§2 permite refinamento registrado no plano): `services/comum.py` (paginação, ordenação com lista permitida, validação de intervalo e termo de busca) e `routers/comum.py` (parâmetros compartilhados e o builder de `responses`). Evitam repetir 44 vezes a mesma declaração e mantêm um único ponto de verdade.
+2. **Services por domínio** (P5-02), além dos quatro do STYLEGUIDE: `usuarios`, `clientes`, `unidades_medida`, `ingredientes`, `produtos`, `alertas`, `marketing` e `saude`, espelhando os routers. Nenhum importa `fastapi`.
+3. **Ordenação com lista permitida por recurso:** `sort` aceita apenas campos mapeados no service (`ORDENACAO_PERMITIDA`); campo ou direção inválidos resultam em `400`. Nada de SQL interpolado.
+4. **Filtros de data inclusivos nas duas pontas:** `dataInicio`/`dataFim` comparam contra `[00:00 do dia, 00:00 do dia seguinte)` no fuso de São Paulo, de modo que o dia informado entra inteiro mesmo em colunas de timestamp.
+5. **Produto desativado não pode ser vendido:** `POST /pedidos` com produto `ativo=false` responde `409`. O contrato não descreve essa regra, mas é o sentido da desativação lógica, e `409` é status declarado na operação. **Reversível em uma linha** em `services/pedidos.py` se a revisão discordar.
+6. **Desativação e exclusão idempotentes:** desativar usuário ou produto já inativo devolve `204` em vez de `409` — o estado final é o pedido, e o contrato não declara conflito para repetição.
+7. **Recomendação de produção descarta produtos com lucro unitário ≤ 0:** produzi-los nunca melhora a função objetivo. Produtos sem composição também ficam de fora (não há como consumir estoque).
+8. **Recomendação de reposição — projeção de consumo:** a necessidade de cada ingrediente é `consumo observado nos últimos periodoDias + quantidadeMinima − saldo válido`, e a escolha dentro do orçamento é uma mochila 0/1 resolvida pelo solver (cobre integralmente um ingrediente ou não o cobre). O contrato define o objetivo, não a fórmula.
+9. **CSV em três colunas (`secao,chave,valor`), UTF-8 sem BOM:** o contrato define apenas "CSV UTF-8" e o nome sugerido do arquivo. Sem BOM porque o contrato pede UTF-8 e o BOM alteraria os bytes; `Content-Disposition: attachment` traz o nome com o período.
+10. **`linhasProximasVencimento` do dashboard usa 7 dias**, mesmo padrão do parâmetro `diasAntecedencia` dos alertas. O schema `Dashboard` não parametriza essa janela.
+
+### Divergências de contrato registradas na Fase 5 (não corrigidas — AGENTS.md §5)
+
+1. **O FastAPI acrescenta `422` a toda operação com parâmetros ou corpo**, e **25 das 44** operações não declaram esse status no contrato. Como o `Mente Fria API.openapi.json` é a fonte normativa, quem se ajustou foi o documento gerado: `main._alinhar_openapi_ao_contrato` remove o `422` automático **somente** onde a própria rota não o declara. O comportamento em execução não muda — o handler da Fase 4 lê `route.responses`, que continua igual ao contrato. O contrato não foi tocado.
+2. **`motivo: DESCARTE_VENCIDO` não tem efeito distinto.** O contrato aceita esse motivo numa `SAIDA`, mas o SPEC §6.3 determina que **nenhuma** saída consome lote vencido. O motivo é gravado como auditoria e a seleção de lotes continua FEFO sobre os **válidos**. Consequência: **estoque vencido não tem como sair do sistema** pelo contrato atual. É a divergência mais relevante desta fase e precisa de decisão: permitir que `DESCARTE_VENCIDO` consuma lotes vencidos, ou aceitar que o saldo vencido fique registrado para sempre.
+3. **`sort` inválido responde `400` também em `listarUnidadesMedida`**, que não declara esse status (mesma família da divergência registrada na Fase 4). As demais operações de lista declaram `400`.
+4. **`503` em `gerarSugestoesMarketing` nunca é emitido:** a geração é local, sem dependência externa. O status segue declarado no contrato e reservado a uma eventual integração.
+5. **Busca `q` em ingredientes cobre apenas `nome`.** O parâmetro compartilhado fala em "nome ou campos de identificação"; em clientes a busca cobre nome, contato e endereço, e em usuários, nome e e-mail. Para ingredientes não há outro campo textual de identificação no schema.
+
+### Evidências da execução (Fase 5)
+
+Ambiente: Python 3.14.0 (`.venv` a partir de `src/api/requirements.txt`), FastAPI 0.163.2, Pydantic 2.14.3, SQLAlchemy 2.1.9, PuLP 3.3.2 com CBC embutido, ruff 0.17.5; SQLite em memória.
+
+| Verificação | Resultado |
+|---|---|
+| 26 caminhos, 44 operações, `operationId` únicos, 44 rotas sem duplicata | OK |
+| Nenhuma rota fora do contrato (sem `/auth/me`, `/tasks`, `/projects`) | OK |
+| Método, caminho e tags por operação × contrato | OK (44/44) |
+| Parâmetros (nome, `in`, obrigatoriedade) por operação × contrato | OK (44/44) |
+| Schema do corpo, status declarados, media types, headers e schema de resposta × contrato | OK (44/44) |
+| `security` por operação: 3 públicas sem `security`, 41 com Bearer | OK |
+| Saúde pública, bootstrap 201 + `Location`, 2º bootstrap 409, login 200 | OK |
+| RBAC: sem token 401; token inválido 401; FUNCIONARIO em rota admin 403; clientes/pedidos/alertas aceitam ambos | OK |
+| CRUD e integridade: unidade duplicada 409, unidade em uso 409, unidade inexistente 404, cliente com pedido 409, ingrediente em composição 409 | OK |
+| Paginação (`data`/`paginacao`, `totalElements`, `totalPages`), busca `q`, `sort` asc/desc, `sort` inválido 400, `size` acima do máximo 400 | OK |
+| Ingrediente nasce com estoque zero e `precisaReposicao=true` | OK |
+| ENTRADA cria lote com `quantidadeRestante` = quantidade; `usuarioId` vem do token | OK |
+| **FEFO**: consome primeiro o lote que vence antes, depois o mais distante; **lote vencido intocado** | OK |
+| Saída acima do estoque válido 409; ingrediente inexistente 404 | OK |
+| Alertas de validade: `VENCIDO`, `PROXIMO_VENCIMENTO`, `diasAteVencimento` ±, `incluirVencidos=false` | OK |
+| Produto com composição (nome/unidade do ingrediente derivados); ingrediente inexistente 404; ingrediente repetido 422 | OK |
+| Pedido: preço capturado, subtotal e total em `Decimal`, `usuarioId` do token, baixa de estoque com motivo `PEDIDO` | OK |
+| **Preço histórico preservado** após alteração do produto | OK |
+| **Transação atômica**: pedido sem estoque → 409, nenhum pedido criado e estoque intacto (rollback integral) | OK |
+| Cancelamento: status/data/usuário registrados, **estoque não devolvido**, 2º cancelamento 409, pedido segue consultável | OK |
+| `204` sem corpo em desativação; produto desativado continua existindo | OK |
+| Recomendação de produção: quantidades inteiras, critério `LUCRO_ESTIMADO`, respeita estoque válido | OK |
+| Recomendação de reposição: custo total dentro do orçamento, período ecoado | OK |
+| **Solver indisponível → 503** em produção e reposição, no envelope `ApiError`, sem vazar detalhe interno | OK |
+| Dashboard ignora pedidos cancelados; faturamento, ticket médio e ranking conferidos; `dataFim < dataInicio` → 400 | OK |
+| CSV: `text/csv; charset=utf-8`, `Content-Disposition`, corpo CSV (não JSON), UTF-8 sem BOM | OK |
+| **Sem N+1**: listagem de pedidos com itens e de produtos com composição em poucos SELECTs | OK |
+| `python verify_api.py` | **1 016 verificações OK, 0 falhas** (estável em 2 execuções) |
+| `python verify_security.py` (regressão da Fase 4) | 306 verificações OK |
+| `python verify_models.py` (regressão da Fase 3) | 122 verificações OK |
+| `python verify_schemas.py --openapi "Mente Fria API.openapi.json"` (regressão da Fase 2) | 5 976 verificações OK |
+| `ruff check src verify_api.py verify_security.py` | OK (sem avisos) |
+
 
 ## Fase 6 — Suíte de testes e validação
 
@@ -732,13 +837,13 @@ Ambiente: Python 3.14.0 (`.venv` novo a partir de `src/api/requirements.txt`), F
 
 ## Decisões técnicas que exigem aprovação humana
 
-As escolhas abaixo não são fixadas pelo contrato e devem ser aprovadas antes de se tornarem decisões de implementação. **Situação em 2026-11-17: 2, 3 e 6 aprovadas; 1, 4, 5 e 7 pendentes.** As pendentes 1 (solver), 4 (migrações) e 5 (seed) bloqueiam tarefas da Fase 5 — ver P5-08, P5-66 e P3-19/P3-20.
+As escolhas abaixo não são fixadas pelo contrato e devem ser aprovadas antes de se tornarem decisões de implementação. **Situação em 2026-11-18: 1, 2, 3, 4, 5 e 6 aprovadas; resta a 7 (ambiente de implantação e gestão de segredos), que só é exigida para colocar a API em produção e não bloqueia a Fase 6.**
 
-1. **Solver de Programação Linear Inteira:** selecionar biblioteca/serviço, versão, estratégia de execução e limites operacionais. O contrato e a SPEC definem o objetivo/regras, mas não identificam o fornecedor ou pacote.
+1. **Solver de Programação Linear Inteira:** ~~selecionar biblioteca/serviço.~~ **APROVADA em 2026-11-18:** **PuLP** (`PuLP>=3.3.2,<4.0`), Python puro, com o CBC distribuído no próprio pacote — sem solver de sistema. Execução isolada em `integrations/optimizer.py`; limite de 10.000 unidades por produto (mesmo teto do item de pedido no contrato); indisponibilidade vira `503`.
 2. **Hash de senha:** ~~confirmar Argon2id e a biblioteca Python/parametrização.~~ **APROVADA em 2026-11-17:** Argon2id via `argon2-cffi`, com os parâmetros padrão da biblioteca registrados em `security.PARAMETROS_HASH` (`time_cost=3`, `memory_cost=65536`, `parallelism=4`, `hash_len=32`, `salt_len=16`) e armazenamento na string PHC completa. Alterar esses parâmetros exige nova aprovação.
 3. **Expiração JWT:** ~~definir valor por ambiente e política operacional.~~ **APROVADA em 2026-11-17:** 3600 s em desenvolvimento, sempre lido de `MENTE_FRIA_JWT_ACCESS_TOKEN_EXPIRE_SECONDS` (obrigatória, sem padrão no código). O prazo de produção faz parte da decisão 7 (ambiente/segredos), ainda pendente.
-4. **Migrações do banco:** aprovar Alembic ou alternativa. A stack define SQLAlchemy 2.0, mas não escolhe ferramenta de migração.
-5. **Seed de dados de referência:** aprovar quais unidades/registros iniciais, se houver. Não criar administrador por seed; o primeiro administrador deve respeitar o endpoint de bootstrap. *(Fase 3: `seed_reference_data()` pronta e idempotente, com lista vazia — nada foi inventado.)*
+4. **Migrações do banco:** ~~aprovar Alembic ou alternativa.~~ **APROVADA em 2026-11-18:** **nenhuma ferramenta de migração**. A criação de schema é `database.init_db()` (`metadata.create_all`), chamada pelo `lifespan` apenas em `local`/`test` e recusada em `production`. Fecha P3-19. Se a API passar a ser implantada com dados a preservar, a decisão precisa ser revista.
+5. **Seed de dados de referência:** ~~aprovar quais unidades/registros iniciais.~~ **APROVADA em 2026-11-18:** **nenhum dado de referência**. `UNIDADES_MEDIDA_REFERENCIA` segue vazia e o seed não é chamado; unidades nascem por `POST /api/v1/unidades-medida` e o primeiro administrador, por `POST /api/v1/auth/administrador`. Fecha P3-20.
 6. **Precisão/escala física de `Numeric`:** ~~confirmar precisão/escala de armazenamento.~~ **APROVADA em 2026-11-17:** dinheiro `(10,2)`, quantidades `(10,3)`, totais/subtotais de pedido `(15,2)`, como implementado na Fase 3. Fecha P3-14.
 7. **Ambiente de implantação e gestão de segredos:** definir secret manager, política de rotação e origens CORS de produção; não há valores de produção definidos nos arquivos.
 
@@ -793,6 +898,6 @@ Ambiente: Python 3.13.18, SQLAlchemy 2.1.9, Pydantic 2.14.3, ruff 0.16.9; SQLite
 | Fase 2 | 64 | 64 |
 | Fase 3 | 22 | 20 |
 | Fase 4 | 18 | 18 |
-| Fase 5 | 68 | 0 |
+| Fase 5 | 68 | 68 |
 | Fase 6 | 26 | 0 |
 | **Total** | **215** | **100** |
