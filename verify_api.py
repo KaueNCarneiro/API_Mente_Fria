@@ -337,6 +337,7 @@ def main() -> int:
                      json={"ingredienteId": 9999, "tipo": "ENTRADA", "quantidade": 10})
     check("ingrediente inexistente -> 404", r.status_code == 404, str(r.status_code))
 
+
     r = cliente.get("/api/v1/alertas/validade", headers=func, params={"diasAntecedencia": 7})
     situacoes = {item["movimentacaoId"]: item["situacao"] for item in r.json()["itens"]}
     check("alerta de validade classifica VENCIDO", situacoes.get(lote_vencido) == "VENCIDO", str(situacoes))
@@ -353,6 +354,38 @@ def main() -> int:
     r = cliente.get("/api/v1/alertas/validade", headers=func, params={"incluirVencidos": False})
     check("incluirVencidos=false remove vencidos",
           all(i["situacao"] != "VENCIDO" for i in r.json()["itens"]), r.text[:200])
+
+    # Descarte de vencidos (decisao aprovada em 2026-11-18): a unica saida que
+    # alcanca lote vencido. Executado DEPOIS das checagens de alerta acima, que
+    # dependem do lote vencido ainda existir.
+    r = cliente.post("/api/v1/movimentacoes-estoque", headers=admin, json={
+        "ingredienteId": acai, "tipo": "SAIDA", "quantidade": 500,
+        "motivo": "DESCARTE_VENCIDO"})
+    check("descarte acima do saldo vencido -> 409 (não usa lote válido)", r.status_code == 409, str(r.status_code))
+    saldo_antes_descarte = Decimal(str(cliente.get(f"/api/v1/ingredientes/{acai}", headers=admin).json()["quantidadeEstoque"]))
+    r = cliente.post("/api/v1/movimentacoes-estoque", headers=admin, json={
+        "ingredienteId": acai, "tipo": "SAIDA", "quantidade": 50,
+        "motivo": "DESCARTE_VENCIDO", "observacao": "Lote vencido descartado."})
+    check("descarte parcial de vencidos -> 201", r.status_code == 201, r.text[:200])
+    check("descarte registra motivo DESCARTE_VENCIDO", r.json()["motivo"] == "DESCARTE_VENCIDO", r.text[:200])
+    movimentacoes = {m["id"]: m for m in cliente.get("/api/v1/movimentacoes-estoque", headers=admin,
+                                                     params={"ingredienteId": acai, "size": 100}).json()["data"]}
+    check("descarte abateu o lote vencido",
+          Decimal(str(movimentacoes[lote_vencido]["quantidadeRestante"])) == 150, str(movimentacoes[lote_vencido]))
+    check("descarte não tocou o lote válido",
+          Decimal(str(movimentacoes[lote_longe]["quantidadeRestante"])) == 900, str(movimentacoes[lote_longe]))
+    saldo_apos_descarte = Decimal(str(cliente.get(f"/api/v1/ingredientes/{acai}", headers=admin).json()["quantidadeEstoque"]))
+    check("saldo total diminui com o descarte", saldo_antes_descarte - saldo_apos_descarte == 50,
+          f"{saldo_antes_descarte} -> {saldo_apos_descarte}")
+    r = cliente.post("/api/v1/movimentacoes-estoque", headers=admin, json={
+        "ingredienteId": acai, "tipo": "SAIDA", "quantidade": 150, "motivo": "DESCARTE_VENCIDO"})
+    check("descarte do restante do lote vencido -> 201", r.status_code == 201, r.text[:200])
+    r = cliente.post("/api/v1/movimentacoes-estoque", headers=admin, json={
+        "ingredienteId": acai, "tipo": "SAIDA", "quantidade": 1, "motivo": "DESCARTE_VENCIDO"})
+    check("sem saldo vencido restante -> 409", r.status_code == 409, str(r.status_code))
+    r = cliente.get("/api/v1/alertas/validade", headers=func, params={"diasAntecedencia": 7})
+    check("lote descartado sai dos alertas de validade",
+          lote_vencido not in {i["movimentacaoId"] for i in r.json()["itens"]}, r.text[:200])
 
     # 8 — produtos, composição e pedidos --------------------------------------------------
     print("[8] produtos, composição, pedidos e cancelamento")
@@ -453,7 +486,18 @@ def main() -> int:
     check("critério é LUCRO_ESTIMADO", producao["criterioOtimizacao"] == "LUCRO_ESTIMADO")
     check("quantidades recomendadas são inteiras",
           all(isinstance(i["quantidadeRecomendada"], int) for i in producao["itens"]), str(producao["itens"]))
-    saldo_valido_atual = Decimal(str(cliente.get(f"/api/v1/ingredientes/{acai}", headers=admin).json()["quantidadeEstoque"])) - 200
+    # `quantidadeEstoque` do contrato inclui lotes vencidos; o saldo válido é ele menos o
+    # que os alertas classificam como VENCIDO (calculado, não assumido).
+    vencido_atual = sum(
+        (Decimal(str(i["quantidadeRestante"]))
+         for i in cliente.get("/api/v1/alertas/validade", headers=admin,
+                              params={"diasAntecedencia": 0}).json()["itens"]
+         if i["situacao"] == "VENCIDO"),
+        Decimal(0),
+    )
+    saldo_valido_atual = Decimal(str(
+        cliente.get(f"/api/v1/ingredientes/{acai}", headers=admin).json()["quantidadeEstoque"]
+    )) - vencido_atual
     if producao["itens"]:
         consumo = Decimal(producao["itens"][0]["quantidadeRecomendada"]) * 200
         check("produção respeita o estoque válido (lote vencido fora)", consumo <= saldo_valido_atual,

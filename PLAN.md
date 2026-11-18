@@ -721,10 +721,12 @@ Ambiente: Python 3.14.0 (`.venv` novo a partir de `src/api/requirements.txt`), F
 9. **CSV em três colunas (`secao,chave,valor`), UTF-8 sem BOM:** o contrato define apenas "CSV UTF-8" e o nome sugerido do arquivo. Sem BOM porque o contrato pede UTF-8 e o BOM alteraria os bytes; `Content-Disposition: attachment` traz o nome com o período.
 10. **`linhasProximasVencimento` do dashboard usa 7 dias**, mesmo padrão do parâmetro `diasAntecedencia` dos alertas. O schema `Dashboard` não parametriza essa janela.
 
-### Divergências de contrato registradas na Fase 5 (não corrigidas — AGENTS.md §5)
+### Divergências de contrato registradas na Fase 5 (AGENTS.md §5)
+
+> Situação em 2026-11-18: a divergência 2 (`DESCARTE_VENCIDO`) foi **resolvida** na revisão humana; as demais seguem registradas, sem alteração do contrato.
 
 1. **O FastAPI acrescenta `422` a toda operação com parâmetros ou corpo**, e **25 das 44** operações não declaram esse status no contrato. Como o `Mente Fria API.openapi.json` é a fonte normativa, quem se ajustou foi o documento gerado: `main._alinhar_openapi_ao_contrato` remove o `422` automático **somente** onde a própria rota não o declara. O comportamento em execução não muda — o handler da Fase 4 lê `route.responses`, que continua igual ao contrato. O contrato não foi tocado.
-2. **`motivo: DESCARTE_VENCIDO` não tem efeito distinto.** O contrato aceita esse motivo numa `SAIDA`, mas o SPEC §6.3 determina que **nenhuma** saída consome lote vencido. O motivo é gravado como auditoria e a seleção de lotes continua FEFO sobre os **válidos**. Consequência: **estoque vencido não tem como sair do sistema** pelo contrato atual. É a divergência mais relevante desta fase e precisa de decisão: permitir que `DESCARTE_VENCIDO` consuma lotes vencidos, ou aceitar que o saldo vencido fique registrado para sempre.
+2. **`motivo: DESCARTE_VENCIDO` — RESOLVIDA em 2026-11-18.** A divergência era: o contrato aceita esse motivo numa `SAIDA`, mas o SPEC §6.3 determina que nenhuma saída consome lote vencido, de modo que o estoque vencido nunca sairia do sistema e seguiria inflando `quantidadeEstoque`. **Decisão aprovada:** uma `SAIDA` com `motivo=DESCARTE_VENCIDO` passa a abater **somente lotes vencidos**, do mais antigo ao mais novo (`services/estoque.descartar_vencidos`); saldo vencido insuficiente resulta em `409`, mesmo havendo saldo válido. As demais saídas (`CONVENCIONAL` e `PEDIDO`) seguem em FEFO sobre lotes válidos, sem jamais tocar vencido. **Isto altera a leitura literal do SPEC §6.3**, que passa a valer para as saídas de consumo, sendo o descarte a exceção explícita — mudança consciente, registrada aqui, e não um descuido. O contrato OpenAPI não foi alterado: o enum já previa o motivo. Verificado em `verify_api.py` (descarte parcial, descarte total, `409` sem saldo vencido, lote válido intocado e saída do alerta de validade).
 3. **`sort` inválido responde `400` também em `listarUnidadesMedida`**, que não declara esse status (mesma família da divergência registrada na Fase 4). As demais operações de lista declaram `400`.
 4. **`503` em `gerarSugestoesMarketing` nunca é emitido:** a geração é local, sem dependência externa. O status segue declarado no contrato e reservado a uma eventual integração.
 5. **Busca `q` em ingredientes cobre apenas `nome`.** O parâmetro compartilhado fala em "nome ou campos de identificação"; em clientes a busca cobre nome, contato e endereço, e em usuários, nome e e-mail. Para ingredientes não há outro campo textual de identificação no schema.
@@ -748,6 +750,7 @@ Ambiente: Python 3.14.0 (`.venv` a partir de `src/api/requirements.txt`), FastAP
 | Ingrediente nasce com estoque zero e `precisaReposicao=true` | OK |
 | ENTRADA cria lote com `quantidadeRestante` = quantidade; `usuarioId` vem do token | OK |
 | **FEFO**: consome primeiro o lote que vence antes, depois o mais distante; **lote vencido intocado** | OK |
+| **Descarte de vencidos**: abate só lote vencido, `409` sem saldo vencido, lote válido intocado, sai do alerta | OK |
 | Saída acima do estoque válido 409; ingrediente inexistente 404 | OK |
 | Alertas de validade: `VENCIDO`, `PROXIMO_VENCIMENTO`, `diasAteVencimento` ±, `incluirVencidos=false` | OK |
 | Produto com composição (nome/unidade do ingrediente derivados); ingrediente inexistente 404; ingrediente repetido 422 | OK |
@@ -762,7 +765,7 @@ Ambiente: Python 3.14.0 (`.venv` a partir de `src/api/requirements.txt`), FastAP
 | Dashboard ignora pedidos cancelados; faturamento, ticket médio e ranking conferidos; `dataFim < dataInicio` → 400 | OK |
 | CSV: `text/csv; charset=utf-8`, `Content-Disposition`, corpo CSV (não JSON), UTF-8 sem BOM | OK |
 | **Sem N+1**: listagem de pedidos com itens e de produtos com composição em poucos SELECTs | OK |
-| `python verify_api.py` | **1 016 verificações OK, 0 falhas** (estável em 2 execuções) |
+| `python verify_api.py` | **1 025 verificações OK, 0 falhas** (estável em 2 execuções) |
 | `python verify_security.py` (regressão da Fase 4) | 306 verificações OK |
 | `python verify_models.py` (regressão da Fase 3) | 122 verificações OK |
 | `python verify_schemas.py --openapi "Mente Fria API.openapi.json"` (regressão da Fase 2) | 5 976 verificações OK |
