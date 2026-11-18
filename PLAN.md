@@ -1,6 +1,6 @@
 # PLAN.md — Implementação da Mente Fria API
 
-> **Status (2026-11-16):** Fases 1 e 2 concluídas. **Fase 3 executada: 19 de 22 tarefas verificadas**; P3-14 (precisão do `Numeric`), P3-19 (migrações) e P3-20 (seed) permanecem abertas por dependerem de decisões humanas (6, 4 e 5). Fases 4 a 6 **não iniciadas**. Execução interrompida para **revisão humana**.
+> **Status (2026-11-17):** Fases 1 e 2 concluídas. **Fase 3: 20 de 22 tarefas** — P3-14 fechada com a aprovação da decisão 6; P3-19 (migrações) e P3-20 (seed) seguem **abertas**, bloqueadas pelas decisões 4 e 5. **Fase 4 executada: 18 de 18 tarefas verificadas** (decisões 2 e 3 aprovadas na revisão humana de 2026-11-17). Fases 5 e 6 **não iniciadas**. Execução interrompida para **revisão humana**.
 > **Verificação contra o contrato real:** `python verify_schemas.py --openapi "Mente Fria API.openapi.json"` executado em 2026-11-15 sobre o repositório publicado (commit `327c783`): 5 976 verificações, todas OK (inclui descrições e exemplos).
 
 ## Premissas e governança
@@ -281,7 +281,7 @@ Em `test`/`production` não há `.env`: forneça `MENTE_FRIA_ENV`, `MENTE_FRIA_D
 
 ## Fase 3 — Modelagem ORM e banco de dados
 
-**Total de tarefas: 22** — **concluídas e verificadas: 19** (abertas: P3-14, P3-19, P3-20 — aguardam decisões 6, 4 e 5)
+**Total de tarefas: 22** — **concluídas e verificadas: 20** (P3-14 fechada em 2026-11-17 com a aprovação da decisão 6; abertas: P3-19 e P3-20 — aguardam as decisões 4 e 5)
 
 ### Checklist sequencial
 
@@ -324,9 +324,9 @@ Em `test`/`production` não há `.env`: forneça `MENTE_FRIA_ENV`, `MENTE_FRIA_D
 - [x] **P3-13** Definir restrições de unicidade e integridade referencial: e-mail, unidade em uso, cliente com pedido, ingrediente com composição/histórico e produto com itens históricos.  
   - Dependências: P3-02 a P3-12.  
   - Evidência: Verificado com `PRAGMA foreign_keys=ON`: unidade em uso, cliente com pedido, ingrediente com composição, ingrediente com movimentações, produto com itens, usuário com pedidos/movimentações e pedido com itens **não** podem ser excluídos.
-- [ ] **P3-14** Definir `Numeric` com precisão/escala adequada e conversão `Decimal` para dinheiro e quantidades decimais; não usar `float` em cálculos financeiros.  
+- [x] **P3-14** Definir `Numeric` com precisão/escala adequada e conversão `Decimal` para dinheiro e quantidades decimais; não usar `float` em cálculos financeiros.  
   - Dependências: P3-05 a P3-11.  
-  - Situação: **implementado e verificado, aguardando aprovação humana** (decisão 6 — precisão/escala física). Proposta aplicada: dinheiro `Numeric(10,2)`, quantidades `Numeric(10,3)`, totais/subtotais de pedido `Numeric(15,2)`. Verificado: valores nos limites do contrato (`99999999.99`, `9999999.999`) e `valorTotal` de 12 dígitos inteiros voltam sem perda; sem `float` nos modelos; nenhum aviso do SQLAlchemy.
+  - Evidência: **decisão 6 aprovada na revisão humana de 2026-11-17**, confirmando a proposta já implementada: dinheiro `Numeric(10,2)`, quantidades `Numeric(10,3)`, totais/subtotais de pedido `Numeric(15,2)`. Verificado: valores nos limites do contrato (`99999999.99`, `9999999.999`) e `valorTotal` de 12 dígitos inteiros voltam sem perda; sem `float` nos modelos; nenhum aviso do SQLAlchemy (`verify_models.py`, 122 verificações OK).
 - [x] **P3-15** Definir semântica de `date` e `datetime` com timezone quando aplicável, alinhada aos formatos OpenAPI.  
   - Dependências: P3-06; P3-10.  
   - Evidência: `TimestampTZ`: grava UTC, devolve `America/Sao_Paulo` (-03:00); `datetime` sem fuso é recusado; validade é `date` (verificado).
@@ -356,7 +356,7 @@ Em `test`/`production` não há `.env`: forneça `MENTE_FRIA_ENV`, `MENTE_FRIA_D
 
 - [x] Nove grupos de entidades do domínio estão modelados e relacionados com SQLAlchemy 2.0.
 - [x] Constraints e FKs preservam integridade e histórico; exclusões seguem regras de conflito/desativação.
-- [ ] Valores monetários/decimais usam Decimal/Numeric e saldo de estoque é derivado. *(saldo derivado e `Decimal` verificados; falta a aprovação da precisão física — P3-14/decisão 6)*
+- [x] Valores monetários/decimais usam Decimal/Numeric e saldo de estoque é derivado. *(saldo derivado e `Decimal` verificados; precisão física aprovada em 2026-11-17 — P3-14/decisão 6)*
 - [ ] Engine, SessionLocal, get_db, inicialização, seed compatível com bootstrap e banco isolado de testes estão definidos. *(Engine, SessionLocal, `get_db` e banco de testes verificados; inicialização depende da decisão 4 e o seed, da decisão 5 — P3-19/P3-20)*
 
 ### Decisões da Fase 3 a validar na revisão humana
@@ -371,58 +371,148 @@ Em `test`/`production` não há `.env`: forneça `MENTE_FRIA_ENV`, `MENTE_FRIA_D
 8. **`dataValidade` anulável no banco** (o DTO a exige em ENTRADA, mas a SPEC §6.3 a chama de opcional; a regra fica nos services/Fase 5). Lotes sem validade contam como válidos.
 9. **`quantidadeMinima`** omitida no cadastro assume `0` (o contrato a torna opcional no DTO, mas obrigatória na resposta).
 10. **`observacaoCancelamento`** é persistida (campo do `CancelamentoPedidoDTO`), mas não faz parte do schema `Pedido`.
-11. **E-mail:** `UNIQUE` exato (sensível a maiúsculas/minúsculas); normalização (ex.: minúsculas) é decisão de service na Fase 4.
+11. **E-mail:** `UNIQUE` exato (sensível a maiúsculas/minúsculas); normalização (ex.: minúsculas) é decisão de service na Fase 4. → **Resolvida na Fase 4** (decisão 4 da Fase 4): normalização para minúsculas no cadastro e na busca de login.
 12. **Engine preguiçosa e sem `create_all` automático:** `database.py` não cria nada ao ser importado e `init_db()` só roda quando chamada (e não em `production`). **Não foi ligada ao `lifespan` do `main.py`** (fora do escopo desta fase).
 
 ## Fase 4 — Segurança, autenticação e tratamento de erros
 
-**Total de tarefas: 18** — **não iniciada**
+**Total de tarefas: 18** — **concluídas e verificadas: 18** (decisões 2 e 3 aprovadas na revisão humana de 2026-11-17)
 
 ### Checklist sequencial
 
-- [ ] **P4-01** Selecionar e registrar algoritmo de hash de senha resistente (preferencialmente Argon2id), parâmetros e formato de armazenamento; nunca armazenar senha em texto puro.  
-  - Dependências: P1-06; P1-09.
-- [ ] **P4-02** Definir funções de hash e verificação de senha, incluindo tratamento seguro de hash inválido.  
-  - Dependências: P4-01.
-- [ ] **P4-03** Implementar emissão e validação JWT com PyJWT, `HS256` conforme SPEC.md e claims estritamente necessários à identidade/perfil.  
-  - Dependências: P1-09; P4-02.
-- [ ] **P4-04** Definir expiração JWT configurável por ambiente sem inventar prazo público fixo; garantir retorno coerente de `expiresInSeconds`.  
-  - Dependências: P1-09; P4-03.
-- [ ] **P4-05** Configurar esquema HTTP Bearer e dependência `get_current_user` para validar assinatura, expiração e usuário ativo.  
-  - Dependências: P4-03; P3-02; P3-18.
-- [ ] **P4-06** Implementar mecanismo `require_role`/restrição de perfil apenas onde a descrição da operação exige perfil específico.  
-  - Dependências: P4-05.
-- [ ] **P4-07** Traduzir a matriz RBAC operação por operação a partir de `security` e descrições OpenAPI; operações apenas autenticadas não recebem restrição de papel inventada.  
-  - Dependências: P4-06.
-- [ ] **P4-08** Implementar bootstrap transacional do primeiro administrador: público, permitido somente quando não existir administrador e conflito `409` após bootstrap.  
-  - Dependências: P3-02; P4-02; P4-07.
-- [ ] **P4-09** Implementar login público: verificar credenciais e estado ativo; retornar `401` para credenciais inválidas ou conta inativa.  
-  - Dependências: P2-58; P3-02; P4-02; P4-03.
-- [ ] **P4-10** Garantir cadastro comum de usuário com perfil `FUNCIONARIO` definido no servidor; nunca aceitar perfil arbitrário do DTO.  
-  - Dependências: P2-58; P3-02; P4-07.
-- [ ] **P4-11** Definir exceções de domínio para não encontrado, conflito, validação, não autorizado, proibido e indisponibilidade de dependência.  
-  - Dependências: P2-59.
-- [ ] **P4-12** Implementar handlers globais para erros HTTP e exceções, serializando o envelope `ApiError`/`ApiErrorDetail`.  
-  - Dependências: P4-11; P2-59.
-- [ ] **P4-13** Converter erros de validação do FastAPI/Pydantic em `ApiError` com detalhes úteis por campo e status contratual `422`.  
-  - Dependências: P4-12; P2-59.
-- [ ] **P4-14** Mapear erros de requisição malformada para `400` somente nas operações que declaram esse status, sem converter indiscriminadamente erros de validação.  
-  - Dependências: P4-12.
-- [ ] **P4-15** Mapear `401`, `403`, `404`, `409` e `503` para `ApiError`, respeitando a resposta declarada em cada operação.  
-  - Dependências: P4-12; P4-07.
-- [ ] **P4-16** Planejar `correlationId`, timestamp e caminho da requisição no envelope de erro, sem expor segredos ou dados internos.  
-  - Dependências: P4-12.
-- [ ] **P4-17** Garantir que respostas `204` sejam emitidas sem corpo e sem serialização de schema JSON.  
-  - Dependências: P4-12.
-- [ ] **P4-18** Planejar testes de hash, JWT válido/inválido/expirado, conta inativa, bootstrap concorrente e matriz RBAC.  
-  - Dependências: P4-01 a P4-17.
+- [x] **P4-01** Selecionar e registrar algoritmo de hash de senha resistente (preferencialmente Argon2id), parâmetros e formato de armazenamento; nunca armazenar senha em texto puro.  
+  - Dependências: P1-06; P1-09.  
+  - Evidência: **decisão 2 aprovada em 2026-11-17** — Argon2id via `argon2-cffi` 25.1.0 (`PasswordHasher`). Parâmetros registrados em `security.PARAMETROS_HASH`: `time_cost=3`, `memory_cost=65536` (64 MiB), `parallelism=4`, `hash_len=32`, `salt_len=16`. Formato de armazenamento: string PHC completa (`$argon2id$v=19$m=65536,t=3,p=4$...`), que já embute sal e custos, em `usuarios.senha_hash` (`String(255)`). Verificado: hash não contém a senha, custos gravados conferem com `PARAMETROS_HASH`, versão `v=19`, sal aleatório (dois hashes da mesma senha diferem).
+- [x] **P4-02** Definir funções de hash e verificação de senha, incluindo tratamento seguro de hash inválido.  
+  - Dependências: P4-01.  
+  - Evidência: `gerar_hash_senha` e `verificar_senha` em `security.py`. `verificar_senha` devolve `False` — sem exceção e sem revelar o motivo ao cliente — para senha errada e para hash vazio, `None`, lixo, formato bcrypt, argon2 truncado, **fora do ASCII** e `bytes`. Os dois últimos casos surgiram da verificação: `argon2-cffi` levanta `UnicodeEncodeError`/`TypeError` antes de analisar o formato, e o tratamento foi ampliado para `(ValueError, TypeError)`. `precisa_rehash` também é tolerante a hash inválido.
+- [x] **P4-03** Implementar emissão e validação JWT com PyJWT, `HS256` conforme SPEC.md e claims estritamente necessários à identidade/perfil.  
+  - Dependências: P1-09; P4-02.  
+  - Evidência: `criar_token_acesso`/`decodificar_token` com PyJWT 2.15.1 e `HS256` lido de `config.jwt_algorithm` (`Literal["HS256"]`). Claims exatamente `sub` (id), `perfil`, `iat` e `exp` — verificado que o conjunto é só esse e que o token não embute e-mail nem hash. Recusados com `401`: expirado, assinatura de outra chave, `HS512`, `alg=none` (token sem assinatura), `exp` ausente, token adulterado e texto arbitrário.
+- [x] **P4-04** Definir expiração JWT configurável por ambiente sem inventar prazo público fixo; garantir retorno coerente de `expiresInSeconds`.  
+  - Dependências: P1-09; P4-03.  
+  - Evidência: **decisão 3 aprovada em 2026-11-17** — 3600 s em desenvolvimento, sempre vindo de `MENTE_FRIA_JWT_ACCESS_TOKEN_EXPIRE_SECONDS` (obrigatória, sem padrão no código; `Field(ge=1)`). Nenhum prazo fixo foi escrito no código. Verificado com 60 s: `exp - iat == 60` e `AuthToken.expiresInSeconds == 60` (`montar_auth_token`).
+- [x] **P4-05** Configurar esquema HTTP Bearer e dependência `get_current_user` para validar assinatura, expiração e usuário ativo.  
+  - Dependências: P4-03; P3-02; P3-18.  
+  - Evidência: `HTTPBearer(bearerFormat="JWT", auto_error=False)` — `auto_error=False` para que a resposta seja `401` no envelope `ApiError`, e não o `403`/`{"detail": ...}` que o próprio `HTTPBearer` emitiria. `get_current_user` valida, em ordem: cabeçalho presente, assinatura/expiração, `sub` numérico, usuário existente e `ativo`. Verificado `401` para: sem cabeçalho, credencial vazia, `sub` não numérico, usuário inexistente, conta inativa e conta desativada **depois** da emissão do token.
+- [x] **P4-06** Implementar mecanismo `require_role`/restrição de perfil apenas onde a descrição da operação exige perfil específico.  
+  - Dependências: P4-05.  
+  - Evidência: `require_role(*perfis)` devolve dependência que exige um dos perfis e levanta `403` caso contrário; recusa perfis fora do domínio com `ValueError` (verificado com `ADMIN`). Atalhos `somente_administrador` e `administrador_ou_funcionario`. Verificado: `ADMINISTRADOR` passa, `FUNCIONARIO` recebe `403` em rota administrativa, a mensagem do `403` não revela o perfil exigido, e ambos passam onde o contrato libera os dois.
+- [x] **P4-07** Traduzir a matriz RBAC operação por operação a partir de `security` e descrições OpenAPI; operações apenas autenticadas não recebem restrição de papel inventada.  
+  - Dependências: P4-06.  
+  - Evidência: `security.MATRIZ_RBAC` cobre as **44 operações** dos **26 caminhos**, por `operationId`: **3 públicas** (`security: []`), **27 somente `ADMINISTRADOR`**, **5 para ambos os perfis** (clientes) e **9 apenas autenticadas** (`None`, sem restrição inventada): movimentações de estoque (3), pedidos (4) e alertas (2). `verify_security.py` compara a matriz com o contrato operação por operação: públicas × `security: []`, protegidas × `bearerAuth` + `401`/`403` declarados, e a restrição de perfil × a descrição de cada operação. `dependencia_de_autorizacao(operationId)` é o ponto de uso dos routers da Fase 5 e recusa operação fora do contrato.
+  - Atenção: `cadastrarFuncionario` é **somente `ADMINISTRADOR`** — a descrição cita `FUNCIONARIO` apenas como o perfil *atribuído* pelo servidor ("o perfil é definido pelo servidor como FUNCIONARIO; somente ADMINISTRADOR pode cadastrar funcionários"). A tabela §5.2 do SPEC.md já dizia isso ("/usuarios — ADMINISTRADOR"); busca por palavra-chave na descrição produz falso positivo.
+- [x] **P4-08** Implementar bootstrap transacional do primeiro administrador: público, permitido somente quando não existir administrador e conflito `409` após bootstrap.  
+  - Dependências: P3-02; P4-02; P4-07.  
+  - Evidência: `criar_conta_administrador` verifica a ausência de administrador, insere e **reconta na mesma transação** após o `flush` (que toma a trava de escrita do SQLite); se a contagem não for 1, faz `rollback` e levanta `409`. `IntegrityError` de e-mail duplicado também vira `409`, com `rollback`. Verificado: 1º bootstrap cria `ADMINISTRADOR` ativo com senha só em hash; 2º bootstrap (outro e-mail) recebe `409` e o banco segue com **um único** administrador. **Concorrência real verificada**: duas threads, e-mails distintos, banco SQLite em arquivo temporário (o banco em memória compartilha uma só conexão e não exercitaria a trava) → exatamente 1 sucesso, 1 `409`, 1 administrador; estável em 4 execuções consecutivas.
+- [x] **P4-09** Implementar login público: verificar credenciais e estado ativo; retornar `401` para credenciais inválidas ou conta inativa.  
+  - Dependências: P2-58; P3-02; P4-02; P4-03.  
+  - Evidência: `autenticar(db, LoginDTO)` busca por e-mail normalizado, verifica a senha e então o estado ativo. `401` com **a mesma mensagem** ("Credenciais inválidas ou conta inativa.") para senha errada, e-mail inexistente e conta inativa — verificado que as três mensagens são idênticas, de modo a não revelar a existência da conta. Quando o e-mail não existe, uma verificação contra hash de referência é executada para que o tempo de resposta não denuncie a ausência do cadastro. `montar_auth_token` devolve `AuthToken` com `tokenType="Bearer"` e `usuario` sem senha/hash (verificado no JSON serializado).
+- [x] **P4-10** Garantir cadastro comum de usuário com perfil `FUNCIONARIO` definido no servidor; nunca aceitar perfil arbitrário do DTO.  
+  - Dependências: P2-58; P3-02; P4-07.  
+  - Evidência: `cadastrar_funcionario` fixa `perfil=FUNCIONARIO` no servidor; `CreateFuncionarioDTO` não possui campo de perfil e, por `additionalProperties: false` (`extra="forbid"`), **recusa** `perfil` enviado pelo cliente (verificado com `ValidationError`). E-mail duplicado — inclusive em outra caixa — resulta em `409` com `rollback`, e a sessão segue utilizável.
+- [x] **P4-11** Definir exceções de domínio para não encontrado, conflito, validação, não autorizado, proibido e indisponibilidade de dependência.  
+  - Dependências: P2-59.  
+  - Evidência: `exceptions.py` define `ApiException` (base, com `status_code`, `codigo` e `detalhes`) e as subclasses `RequisicaoInvalidaError` (400), `NaoAutenticadoError` (401), `ProibidoError` (403), `NaoEncontradoError` (404), `ConflitoError` (409), `ValidacaoError` (422) e `DependenciaIndisponivelError` (503). Nenhum status fora dos declarados no contrato.
+- [x] **P4-12** Implementar handlers globais para erros HTTP e exceções, serializando o envelope `ApiError`/`ApiErrorDetail`.  
+  - Dependências: P4-11; P2-59.  
+  - Evidência: `registrar_handlers(app)` registra handlers para `ApiException`, `RequestValidationError`, `ResponseValidationError`, `StarletteHTTPException` e `Exception`; chamado por `main.create_app` (6 handlers na aplicação real). Verificado para 400, 401, 403, 404, 409, 422 e 503: status correto, envelope com **exatamente** `codigo`, `mensagem`, `detalhes`, `timestamp`, `caminho` e `correlationId`, validando contra o schema `ApiError`, **sem** `detail` do FastAPI e **sem** `type`/`title`/`status`/`instance` de RFC 9457. `404` de rota inexistente e `405` de método não permitido também saem como `ApiError`. Códigos estáveis por status: `BAD_REQUEST`, `UNAUTHORIZED`, `FORBIDDEN`, `NOT_FOUND`, `CONFLICT`, `VALIDATION_ERROR`, `INTERNAL_ERROR`, `SERVICE_UNAVAILABLE`.
+- [x] **P4-13** Converter erros de validação do FastAPI/Pydantic em `ApiError` com detalhes úteis por campo e status contratual `422`.  
+  - Dependências: P4-12; P2-59.  
+  - Evidência: `validation_exception_handler` converte cada erro do Pydantic em `ApiErrorDetail` com `campo` (caminho do campo, sem o prefixo `body`/`query`), `mensagem` e `valorRejeitado`. Verificado: corpo com campo inválido → `422` com `campo="preco"` e `valorRejeitado="0"`. **Sigilo verificado**: o valor de campo sensível (`senha`) **não** aparece em `valorRejeitado` — senha curta gera `422` com `campo="senha"` e a senha não consta da resposta; valores não escalares (dict/list) nunca são ecoados, para que um corpo inteiro com senha não vaze.
+- [x] **P4-14** Mapear erros de requisição malformada para `400` somente nas operações que declaram esse status, sem converter indiscriminadamente erros de validação.  
+  - Dependências: P4-12.  
+  - Evidência: o handler classifica a origem (corpo ilegível > parâmetro de caminho > parâmetro de consulta > campo do corpo) e usa o **primeiro status que a operação declara**, consultando `route.responses` + `route.status_code` (`_CANDIDATOS` em `exceptions.py`). Verificado: campo do corpo inválido em operação que declara 400 **e** 422 → `422`; corpo ilegível em operação que declara 400 → `400`, sem ecoar o conteúdo enviado; corpo ilegível em operação que declara só 422 → `422`; parâmetro de consulta incompatível em operação que declara 400 → `400` com o nome do parâmetro no detalhe; parâmetro de caminho inválido em operação que declara só 404 → `404`; o mesmo caso em operação que declara 400 → `400`; caminho inválido tem precedência sobre consulta inválida; sem nenhum candidato declarado → `422` (padrão documentado, com aviso em log). Requisição válida não é afetada.
+- [x] **P4-15** Mapear `401`, `403`, `404`, `409` e `503` para `ApiError`, respeitando a resposta declarada em cada operação.  
+  - Dependências: P4-12; P4-07.  
+  - Evidência: cada exceção de domínio carrega o próprio status e as mensagens padrão espelham as `description` de `components.responses` do contrato (`BadRequest`, `Unauthorized`, `Forbidden`, `NotFound`, `Conflict`, `ValidationError`, `InternalError`, `ServiceUnavailable`). Verificado status a status na seção [7] de `verify_security.py`.
+- [x] **P4-16** Planejar `correlationId`, timestamp e caminho da requisição no envelope de erro, sem expor segredos ou dados internos.  
+  - Dependências: P4-12.  
+  - Evidência: `construir_api_error` preenche `timestamp` com `models.agora()` (ISO 8601 com `-03:00`), `caminho` com `request.url.path` (sem query string, truncado em 300) e `correlationId` com UUID4, repetido no log para rastreio. Todos os limites do schema são respeitados por truncagem (`codigo` 80, `mensagem` 500, `campo` 100, `valorRejeitado` 500). Exceção não tratada → `500` `INTERNAL_ERROR`: verificado que a resposta **não** contém a mensagem interna, `Traceback` nem o nome da exceção (o diagnóstico vai só para o log, já filtrado por `RedactingFilter`). Mensagens e detalhes passam por `config.redact`.
+- [x] **P4-17** Garantir que respostas `204` sejam emitidas sem corpo e sem serialização de schema JSON.  
+  - Dependências: P4-12.  
+  - Evidência: `resposta_sem_conteudo()` devolve `Response(status_code=204)` cru, para uso pelas cinco operações que declaram 204 na Fase 5; o handler de `HTTPException` também devolve `204` sem corpo. Verificado: `content == b""` e nenhum `Content-Type` de JSON na resposta.
+- [x] **P4-18** Planejar testes de hash, JWT válido/inválido/expirado, conta inativa, bootstrap concorrente e matriz RBAC.  
+  - Dependências: P4-01 a P4-17.  
+  - Evidência: `verify_security.py` (raiz) — **305 verificações OK, 0 falhas**, em 8 blocos: hash, JWT, `get_current_user`, `require_role`, matriz RBAC × OpenAPI, bootstrap/login/cadastro (inclusive concorrência real com threads), handlers do `ApiError` e aplicação real. **Não substitui** a suíte pytest da Fase 6: os casos aqui são o roteiro a transcrever em `test_auth.py` e `test_errors.py` (P6).
 
 ### Critérios de aceite
 
-- [ ] Hash seguro, JWT PyJWT/HS256 e HTTP Bearer estão definidos com segredo/expiração configuráveis.
-- [ ] Bootstrap cria somente o primeiro administrador; login valida conta ativa; cadastro comum atribui FUNCIONARIO.
-- [ ] RBAC reproduz a matriz de cada operação, sem restrição adicional não documentada.
-- [ ] Handlers retornam ApiError para os status contratados; 204 não contém corpo.
+- [x] Hash seguro, JWT PyJWT/HS256 e HTTP Bearer estão definidos com segredo/expiração configuráveis.
+- [x] Bootstrap cria somente o primeiro administrador; login valida conta ativa; cadastro comum atribui FUNCIONARIO.
+- [x] RBAC reproduz a matriz de cada operação, sem restrição adicional não documentada.
+- [x] Handlers retornam ApiError para os status contratados; 204 não contém corpo.
+
+### Decisões da Fase 4 a validar na revisão humana
+
+1. **Códigos de erro (`codigo`):** o contrato define `codigo` como string livre (até 80) e só exemplifica `VALIDATION_ERROR`. Adotado um código estável por status, nomeado como o componente de resposta correspondente do OpenAPI: `BAD_REQUEST`, `UNAUTHORIZED`, `FORBIDDEN`, `NOT_FOUND`, `CONFLICT`, `VALIDATION_ERROR`, `INTERNAL_ERROR` e `SERVICE_UNAVAILABLE`.
+2. **Classificação 400 × 422 × 404:** o contrato distingue *requisição malformada ou parâmetros incompatíveis* (400) de *dados compreendidos que violam validação* (422), mas não diz qual usar em cada tipo de falha, e 15 operações não declaram nenhum dos dois. Regra adotada: o handler usa o **primeiro status que a própria operação declara**, percorrendo candidatos em ordem de precisão por origem do erro — corpo ilegível `400→422`; parâmetro de caminho `400→404→422`; parâmetro de consulta `400→422`; campo do corpo `422→400`. Detalhada em "Decisão sobre parâmetros sem `400`/`422` declarados", adiante.
+3. **`valorRejeitado` só para escalares de campos não sensíveis:** campos cujo nome contenha `senha`, `token`, `secret`, `hash` etc. nunca têm o valor ecoado, e valores não escalares (dict/list) também não — um corpo inteiro poderia conter a senha.
+4. **Normalização de e-mail (resolve a decisão 11 da Fase 3):** e-mail gravado e consultado em **minúsculas**, sem espaços nas pontas, no bootstrap, no cadastro e na busca de login. A coluna segue com `UNIQUE` exato; a normalização evita contas duplicadas que difiram apenas por caixa.
+5. **Mensagem única no `401` de login:** senha errada, e-mail inexistente e conta inativa devolvem a mesma mensagem, e o caso de e-mail inexistente executa uma verificação de hash de referência para igualar o tempo de resposta. Consequência aceita: o cliente não distingue "conta inativa" de "senha errada".
+6. **`precisa_rehash` no login:** se o hash foi gerado com parâmetros antigos, ele é regravado no login bem-sucedido. Nenhum efeito sobre o contrato.
+7. **Localização dos fluxos de autenticação:** `criar_conta_administrador`, `autenticar` e `cadastrar_funcionario` ficaram em `security.py`, não em `services/`, porque P4-08/P4-09/P4-10 pertencem a esta fase e `services/usuarios.py` só é previsto em P5-02. Na Fase 5 podem ser movidos para o service de usuários/autenticação sem mudança de comportamento.
+8. **Sem cabeçalho `WWW-Authenticate` no `401`:** a resposta `Unauthorized` do contrato não declara cabeçalho algum, então nenhum foi acrescentado, embora seja o usual em HTTP Bearer. Reverter é trivial se a revisão preferir o cabeçalho.
+
+### Decisão sobre parâmetros sem `400`/`422` declarados (divergência de contrato resolvida sem alterar o OpenAPI)
+
+**O gap.** **15 operações declaram parâmetros (path/query) mas não declaram nem `400` nem `422`**, de modo que o contrato não diz o que responder quando o parâmetro é incompatível — por exemplo `GET /api/v1/usuarios/{id}` com `id=0`, abaixo do `minimum: 1` definido pelo próprio contrato.
+
+**Decisão adotada em 2026-11-17 (autorizada na revisão humana):** usar **somente status que a operação já declara**, sem tocar no `Mente Fria API.openapi.json`.
+
+| Origem do erro | Status, em ordem de precisão |
+|---|---|
+| Corpo ilegível/ausente | `400` → `422` |
+| **Parâmetro de caminho** | `400` → **`404`** → `422` |
+| Parâmetro de consulta/cabeçalho | `400` → `422` |
+| Campo do corpo | `422` → `400` |
+
+Vale o **primeiro status que a operação declarar**. O `404` entra como opção para parâmetro de caminho porque um identificador que viola o contrato não pode designar recurso algum, e "Recurso não encontrado" é resposta declarada nas 13 operações de leitura/exclusão por id que compõem o gap. Parâmetro de caminho tem precedência sobre o de consulta: se o recurso não é identificável, o resto da requisição não importa.
+
+**Efeito medido no contrato real** (verificado em `verify_security.py`, bloco [5]):
+
+- **13 das 15** operações passam a responder `404` — status **declarado** por elas: `consultarUsuario`, `desativarUsuario`, `consultarCliente`, `excluirCliente`, `consultarUnidadeMedida`, `excluirUnidadeMedida`, `consultarIngrediente`, `excluirIngrediente`, `listarMovimentacoesDoIngrediente`, `consultarProduto`, `desativarProduto`, `consultarComposicaoProduto`, `consultarPedido`.
+- **Gap residual: 2 operações**, ambas com parâmetros apenas de consulta e sem `404` aplicável — `listarUnidadesMedida` e `listarAlertasReposicao` (ex.: `size=500` contra o máximo 100). Respondem `422`, com aviso em log. Aqui o `404` seria semanticamente errado: o recurso existe, o filtro é que não serve.
+
+**Por que não as outras duas opções:**
+
+- *Acrescentar `400` às 15 operações no OpenAPI* resolveria o gap por completo, mas altera o contrato normativo — vedado por AGENTS.md §2 e §5 e pela regra 12 da Fase 5 ("não altere schemas ou OpenAPI para facilitar a implementação"). O contrato é o artefato avaliado na entrega; mantê-lo intacto vale mais do que fechar um gap de 2 operações.
+- *Aceitar `422` em todas as 15* era o comportamento anterior: simples, porém emitia status fora do contrato em 15 operações, inclusive onde havia um status declarado e adequado. A decisão atual reduz isso a 2.
+
+**Consequências para as fases seguintes:**
+
+- **Fase 5:** ao declarar `responses` nos routers, copiar exatamente os status do contrato — é essa declaração que o handler consulta. Não acrescentar `400`/`422` a operação que não os declare, pois isso mudaria a resposta.
+- **Fase 6:** testar `id` inválido (`0`, negativo) esperando `404` nas 13 operações, e `422` nas 2 de consulta. O log de aviso nessas 2 é esperado, não é falha.
+- **Reversível:** a tabela vive em `_CANDIDATOS` (`exceptions.py`); retirar o `404` da linha de caminho devolve o comportamento anterior sem outras mudanças.
+
+### Evidências da execução (Fase 4)
+
+Ambiente: Python 3.14.0 (`.venv` novo a partir de `src/api/requirements.txt`), FastAPI 0.163.2, Pydantic 2.14.3, SQLAlchemy 2.1.9, PyJWT 2.15.1, argon2-cffi 25.1.0, ruff 0.17.5; SQLite em memória e em arquivo temporário.
+
+| Verificação | Resultado |
+|---|---|
+| Importação dos módulos de `src.api` (29, exceto testes) | OK |
+| Hash Argon2id: formato PHC, custos gravados, `v=19`, sal aleatório, senha não exposta | OK |
+| Hash inválido (vazio, `None`, lixo, bcrypt, truncado, fora do ASCII, `bytes`) → `False` sem exceção | OK |
+| JWT: claims mínimos, `exp - iat` = expiração configurada, `HS256` no header, sem e-mail/hash no token | OK |
+| JWT recusado: expirado, outra chave, `HS512`, `alg=none`, sem `exp`, adulterado, texto arbitrário | OK (401) |
+| `get_current_user`: sem cabeçalho, credencial vazia, `sub` inválido, inexistente, inativo, desativado após emissão | OK (401) |
+| `require_role`: `ADMINISTRADOR` passa, `FUNCIONARIO` → 403, ambos passam onde liberado, `ADMIN` recusado | OK |
+| Matriz RBAC × OpenAPI: 26 caminhos, 44 operações, 3 públicas, 27 ADMINISTRADOR, 5 ambos, 9 só autenticadas | OK |
+| Bootstrap: 1º cria admin, 2º → 409, único administrador no banco | OK |
+| Bootstrap **concorrente** (2 threads, banco em arquivo): 1 sucesso, 1 conflito 409, 1 administrador | OK (4 execuções) |
+| Login: válido, outra caixa de e-mail, senha errada, e-mail inexistente, conta inativa (mesma mensagem) | OK |
+| Cadastro: perfil sempre `FUNCIONARIO`; DTO recusa `perfil` do cliente; e-mail duplicado → 409 | OK |
+| Handlers: 400/401/403/404/409/422/503 no envelope `ApiError`, sem `detail` e sem RFC 9457 | OK |
+| Classificação 400 × 422 × 404 conforme o que a operação declara (12 cenários) | OK |
+| Gap de parâmetros: 13 operações resolvidas por `404` declarado; residual de 2 (consulta) | OK |
+| Sigilo: senha não aparece em `valorRejeitado`; 500 sem stack trace, sem mensagem interna | OK |
+| `204` sem corpo e sem `Content-Type` de JSON | OK |
+| Aplicação real: 6 handlers, `GET /api/v1/auth/me` → 404 em `ApiError`, 0 rotas de negócio | OK |
+| `python verify_security.py` | **305 verificações OK, 0 falhas** (estável em 4 execuções) |
+| `python verify_models.py` (regressão da Fase 3) | 122 verificações OK |
+| `python verify_schemas.py --openapi "Mente Fria API.openapi.json"` (regressão da Fase 2) | 5 976 verificações OK |
+| `ruff check src verify_security.py` | OK (sem avisos) |
 
 ## Fase 5 — Services, routers e integração da API
 
@@ -642,14 +732,14 @@ Em `test`/`production` não há `.env`: forneça `MENTE_FRIA_ENV`, `MENTE_FRIA_D
 
 ## Decisões técnicas que exigem aprovação humana
 
-As escolhas abaixo não são fixadas pelo contrato e devem ser aprovadas antes de se tornarem decisões de implementação:
+As escolhas abaixo não são fixadas pelo contrato e devem ser aprovadas antes de se tornarem decisões de implementação. **Situação em 2026-11-17: 2, 3 e 6 aprovadas; 1, 4, 5 e 7 pendentes.** As pendentes 1 (solver), 4 (migrações) e 5 (seed) bloqueiam tarefas da Fase 5 — ver P5-08, P5-66 e P3-19/P3-20.
 
 1. **Solver de Programação Linear Inteira:** selecionar biblioteca/serviço, versão, estratégia de execução e limites operacionais. O contrato e a SPEC definem o objetivo/regras, mas não identificam o fornecedor ou pacote.
-2. **Hash de senha:** confirmar Argon2id e a biblioteca Python/parametrização. O requisito é hash seguro; o algoritmo específico não é normatizado no OpenAPI. *(Fase 1 incluiu `argon2-cffi` no `requirements.txt` apenas como proposta.)*
-3. **Expiração JWT:** definir valor por ambiente e política operacional. A SPEC exige configuração, mas não determina duração fixa. *(Fase 1 exige a variável; o `.env.example` traz 3600 s só como exemplo de desenvolvimento.)*
+2. **Hash de senha:** ~~confirmar Argon2id e a biblioteca Python/parametrização.~~ **APROVADA em 2026-11-17:** Argon2id via `argon2-cffi`, com os parâmetros padrão da biblioteca registrados em `security.PARAMETROS_HASH` (`time_cost=3`, `memory_cost=65536`, `parallelism=4`, `hash_len=32`, `salt_len=16`) e armazenamento na string PHC completa. Alterar esses parâmetros exige nova aprovação.
+3. **Expiração JWT:** ~~definir valor por ambiente e política operacional.~~ **APROVADA em 2026-11-17:** 3600 s em desenvolvimento, sempre lido de `MENTE_FRIA_JWT_ACCESS_TOKEN_EXPIRE_SECONDS` (obrigatória, sem padrão no código). O prazo de produção faz parte da decisão 7 (ambiente/segredos), ainda pendente.
 4. **Migrações do banco:** aprovar Alembic ou alternativa. A stack define SQLAlchemy 2.0, mas não escolhe ferramenta de migração.
 5. **Seed de dados de referência:** aprovar quais unidades/registros iniciais, se houver. Não criar administrador por seed; o primeiro administrador deve respeitar o endpoint de bootstrap. *(Fase 3: `seed_reference_data()` pronta e idempotente, com lista vazia — nada foi inventado.)*
-6. **Precisão/escala física de `Numeric`:** confirmar precisão/escala de armazenamento compatível com os limites e `multipleOf` dos schemas, sem arredondamento silencioso. *(Fase 3 aplicou a proposta `(10,2)` / `(10,3)` / `(15,2)`; aguardando confirmação.)*
+6. **Precisão/escala física de `Numeric`:** ~~confirmar precisão/escala de armazenamento.~~ **APROVADA em 2026-11-17:** dinheiro `(10,2)`, quantidades `(10,3)`, totais/subtotais de pedido `(15,2)`, como implementado na Fase 3. Fecha P3-14.
 7. **Ambiente de implantação e gestão de segredos:** definir secret manager, política de rotação e origens CORS de produção; não há valores de produção definidos nos arquivos.
 
 ## Pontos de atenção de contrato
@@ -701,8 +791,8 @@ Ambiente: Python 3.13.18, SQLAlchemy 2.1.9, Pydantic 2.14.3, ruff 0.16.9; SQLite
 |---|---:|---:|
 | Fase 1 | 17 | 17 |
 | Fase 2 | 64 | 64 |
-| Fase 3 | 22 | 19 |
-| Fase 4 | 18 | 0 |
+| Fase 3 | 22 | 20 |
+| Fase 4 | 18 | 18 |
 | Fase 5 | 68 | 0 |
 | Fase 6 | 26 | 0 |
 | **Total** | **215** | **100** |

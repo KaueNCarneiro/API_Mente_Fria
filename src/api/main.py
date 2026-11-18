@@ -3,8 +3,8 @@
 Fábrica FastAPI com metadados do contrato, ciclo de vida (``lifespan``), CORS por
 ambiente e registro centralizado de routers sob ``/api/v1``.
 
-Nesta fase NÃO há routers, handlers de erro, banco nem autenticação: eles pertencem
-às Fases 3, 4 e 5 do PLAN.md. A aplicação sobe sem rotas de negócio.
+A Fase 4 acrescentou o registro dos handlers globais de erro (``ApiError``). Os routers
+de negócio pertencem à Fase 5: a aplicação ainda sobe sem rotas de negócio.
 
 Execução (a partir da raiz do repositório, com o ambiente virtual ativo)::
 
@@ -23,6 +23,7 @@ from fastapi import APIRouter, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from .config import Settings, configure_logging, get_settings
+from .exceptions import registrar_handlers
 
 logger = logging.getLogger(__name__)
 
@@ -114,6 +115,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         lifespan=lifespan,
     )
     _configure_cors(app, settings)
+    # Fase 4 (P4-12): handlers globais do envelope ApiError, antes dos routers.
+    registrar_handlers(app)
     register_routers(app)
     return app
 
