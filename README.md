@@ -67,10 +67,33 @@ povoá-lo pela própria API.
 
 ---
 
-## Primeiros passos
+## Demonstração em um comando
 
-O banco nasce sem nenhum usuário. A sequência abaixo sai do zero até um pedido com baixa
-de estoque. Os exemplos usam `curl`, disponível no Windows 10+, Linux e macOS.
+Com a API no ar e um banco **vazio**:
+
+```bash
+python demonstracao.py
+```
+
+O roteiro percorre 42 chamadas pelos endpoints do contrato e narra cada passo: bootstrap
+do administrador e conflito na segunda tentativa, autorização por perfil, catálogo,
+entradas com validades diferentes, pedido com preço capturado e baixa em **FEFO**,
+alteração de preço que não reescreve o histórico, cancelamento sem devolução de estoque,
+alertas, descarte de lote vencido, recomendação por Programação Linear Inteira, dashboard,
+exportação CSV e o envelope de erro em `404`, `400` e `422`.
+
+Não é seed: o script é um cliente HTTP como outro qualquer, e a política de seed do
+projeto continua vazia. Depende apenas da biblioteca padrão. Para repetir, apague o
+`mente_fria.db` e suba a API de novo — ele precisa de um banco limpo, e avisa quando não
+encontra um.
+
+---
+
+## Primeiros passos, chamada a chamada
+
+Se preferir conduzir à mão, em vez do roteiro acima. O banco nasce sem nenhum usuário, e a
+sequência abaixo sai do zero até um pedido com baixa de estoque. Os exemplos usam `curl`,
+disponível no Windows 10+, Linux e macOS.
 
 **1. Criar o primeiro administrador** (operação pública, permitida uma única vez):
 
@@ -221,5 +244,3 @@ sairia do sistema), e produto desativado não pode ser vendido.
 ## Equipe
 
 Projeto acadêmico desenvolvido por **Kauê Nogueira Carneiro** e **Diogo Miranda**.
-Projeto principal (documentação de sprints, frontend e otimização):
-[KaueNCarneiro/Mente_Fria](https://github.com/KaueNCarneiro/Mente_Fria).
