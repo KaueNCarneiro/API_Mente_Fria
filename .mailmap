@@ -1,0 +1,9 @@
+# Nomes canônicos dos autores.
+#
+# O histórico tem commits de um mesmo integrante sob dois nomes de exibição
+# ("Diogo" e "sixtxxn"), ambos com o mesmo e-mail. Este arquivo unifica a
+# exibição em `git log`, `git shortlog` e `git blame` sem reescrever o
+# histórico — nenhum hash muda e nada precisa ser force-pushed.
+
+Diogo Miranda <diogomiranda0003@gmail.com> <diogomiranda0003@gmail.com>
+Kauê Nogueira Carneiro <kauenogueiracarneiro@gmail.com> <kauenogueiracarneiro@gmail.com>
