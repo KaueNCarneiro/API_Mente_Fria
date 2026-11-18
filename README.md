@@ -35,6 +35,17 @@ Ative o ambiente virtual:
 pip install -r src/api/requirements.txt
 ```
 
+> **Se o PowerShell recusar o `Activate.ps1`** com "a execução de scripts foi desabilitada
+> neste sistema", não precisa mexer na política de execução da máquina: chame os
+> executáveis do ambiente pelo caminho, sem ativar nada.
+>
+> ```powershell
+> .venv\Scripts\pip.exe install -r src/api/requirements.txt
+> ```
+>
+> O mesmo vale adiante: `.venv\Scripts\uvicorn.exe`, `.venv\Scripts\python.exe` e
+> `.venv\Scripts\pytest.exe` no lugar de `uvicorn`, `python` e `pytest`.
+
 ### 2. Configuração
 
 Copie o modelo e gere um segredo para o JWT:
@@ -51,11 +62,16 @@ Cole o valor em `MENTE_FRIA_JWT_SECRET_KEY`, dentro do `.env`. O arquivo é lido
 quando `MENTE_FRIA_ENV=local`; em implantação os valores vêm do ambiente de execução.
 `.env` está no `.gitignore` — nunca versione segredos.
 
+Em desenvolvimento local o valor do modelo já serve para subir a API; gerar um próprio é
+boa prática. Em `production` a aplicação **recusa** iniciar com o placeholder.
+
 ### 3. Subir a API
 
 ```bash
 uvicorn --factory src.api.main:create_app
 ```
+
+Sem o ambiente ativado (ver o aviso acima): `.venv\Scripts\uvicorn.exe --factory src.api.main:create_app`
 
 - API: <http://127.0.0.1:8000/api/v1>
 - Documentação interativa (Swagger UI): <http://127.0.0.1:8000/docs>
@@ -67,10 +83,35 @@ povoá-lo pela própria API.
 
 ---
 
-## Primeiros passos
+## Demonstração em um comando
 
-O banco nasce sem nenhum usuário. A sequência abaixo sai do zero até um pedido com baixa
-de estoque. Os exemplos usam `curl`, disponível no Windows 10+, Linux e macOS.
+Com a API no ar e um banco **vazio**, em outro terminal:
+
+```bash
+python demonstracao.py
+```
+
+Sem o ambiente ativado: `.venv\Scripts\python.exe demonstracao.py`
+
+O roteiro percorre 42 chamadas pelos endpoints do contrato e narra cada passo: bootstrap
+do administrador e conflito na segunda tentativa, autorização por perfil, catálogo,
+entradas com validades diferentes, pedido com preço capturado e baixa em **FEFO**,
+alteração de preço que não reescreve o histórico, cancelamento sem devolução de estoque,
+alertas, descarte de lote vencido, recomendação por Programação Linear Inteira, dashboard,
+exportação CSV e o envelope de erro em `404`, `400` e `422`.
+
+Não é seed: o script é um cliente HTTP como outro qualquer, e a política de seed do
+projeto continua vazia. Depende apenas da biblioteca padrão. Para repetir, apague o
+`mente_fria.db` e suba a API de novo — ele precisa de um banco limpo, e avisa quando não
+encontra um.
+
+---
+
+## Primeiros passos, chamada a chamada
+
+Se preferir conduzir à mão, em vez do roteiro acima. O banco nasce sem nenhum usuário, e a
+sequência abaixo sai do zero até um pedido com baixa de estoque. Os exemplos usam `curl`,
+disponível no Windows 10+, Linux e macOS.
 
 **1. Criar o primeiro administrador** (operação pública, permitida uma única vez):
 
@@ -221,5 +262,3 @@ sairia do sistema), e produto desativado não pode ser vendido.
 ## Equipe
 
 Projeto acadêmico desenvolvido por **Kauê Nogueira Carneiro** e **Diogo Miranda**.
-Projeto principal (documentação de sprints, frontend e otimização):
-[KaueNCarneiro/Mente_Fria](https://github.com/KaueNCarneiro/Mente_Fria).
