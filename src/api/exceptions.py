@@ -81,6 +81,14 @@ _MENSAGEM_PADRAO: Final[dict[int, str]] = {
     422: "Os dados foram compreendidos, mas violam uma regra de validação.",
     500: "Erro interno inesperado.",
     503: "Serviço de otimização ou dependência temporariamente indisponível.",
+    # Status que o contrato não declara, mas que o framework pode emitir sozinho antes de
+    # chegar a qualquer operação. Rotulá-los como erro interno seria mentira: o servidor
+    # está são, quem errou foi a requisição.
+    405: "Método HTTP não permitido para este caminho.",
+    406: "Formato de resposta solicitado não é oferecido por esta operação.",
+    413: "Corpo da requisição grande demais.",
+    415: "Tipo de mídia do corpo não é aceito por esta operação.",
+    429: "Requisições demais em pouco tempo.",
 }
 
 _CODIGO_PADRAO: Final[dict[int, str]] = {
@@ -92,7 +100,33 @@ _CODIGO_PADRAO: Final[dict[int, str]] = {
     422: CODIGO_VALIDATION_ERROR,
     500: CODIGO_INTERNAL_ERROR,
     503: CODIGO_SERVICE_UNAVAILABLE,
+    405: "METHOD_NOT_ALLOWED",
+    406: "NOT_ACCEPTABLE",
+    413: "PAYLOAD_TOO_LARGE",
+    415: "UNSUPPORTED_MEDIA_TYPE",
+    429: "TOO_MANY_REQUESTS",
 }
+
+# Fallback por classe de status: um 4xx desconhecido é erro de quem chamou, não do
+# servidor, e chamá-lo de INTERNAL_ERROR faria o cliente procurar um defeito inexistente.
+CODIGO_REQUISICAO_INVALIDA: Final = "REQUEST_ERROR"
+MENSAGEM_REQUISICAO_INVALIDA: Final = "A requisição não pôde ser atendida."
+
+
+def _codigo_de(status_code: int) -> str:
+    if status_code in _CODIGO_PADRAO:
+        return _CODIGO_PADRAO[status_code]
+    return CODIGO_REQUISICAO_INVALIDA if 400 <= status_code < 500 else CODIGO_INTERNAL_ERROR
+
+
+def _mensagem_de(status_code: int) -> str:
+    if status_code in _MENSAGEM_PADRAO:
+        return _MENSAGEM_PADRAO[status_code]
+    return (
+        MENSAGEM_REQUISICAO_INVALIDA
+        if 400 <= status_code < 500
+        else _MENSAGEM_PADRAO[500]
+    )
 
 # Nomes de campo cujo valor nunca é ecoado em `valorRejeitado`.
 _CAMPOS_SENSIVEIS: Final = (
@@ -216,11 +250,8 @@ def construir_api_error(
 ) -> ApiError:
     """Monta um ``ApiError`` válido para o contrato, com ``timestamp`` e ``caminho``."""
     return ApiError(
-        codigo=_truncar(codigo or _CODIGO_PADRAO.get(status_code, CODIGO_INTERNAL_ERROR), MAX_CODIGO),
-        mensagem=_truncar(
-            mensagem or _MENSAGEM_PADRAO.get(status_code, "Erro interno inesperado."),
-            MAX_MENSAGEM,
-        ),
+        codigo=_truncar(codigo or _codigo_de(status_code), MAX_CODIGO),
+        mensagem=_truncar(mensagem or _mensagem_de(status_code), MAX_MENSAGEM),
         detalhes=list(detalhes or ()),
         timestamp=agora(),
         caminho=_truncar(caminho, MAX_CAMINHO),
@@ -433,21 +464,19 @@ async def http_exception_handler(request: Request, exc: StarletteHTTPException) 
     if status_code == HTTPStatus.NO_CONTENT:  # 204 nunca tem corpo (P4-17)
         return Response(status_code=status_code)
 
-    detalhe = exc.detail
-    mensagem = _MENSAGEM_PADRAO.get(status_code)
-    if isinstance(detalhe, str) and detalhe and detalhe != HTTPStatus(status_code).phrase:
-        mensagem = redact(detalhe)
-
-    erro = construir_api_error(
-        status_code=status_code, caminho=_caminho(request), mensagem=mensagem
-    )
+    # A mensagem é sempre a nossa, em português: o `detail` do framework vem em inglês
+    # ("Method Not Allowed", "There was an error parsing the body") e destoaria do resto
+    # da API. Ele vai para o log, onde serve ao diagnóstico.
+    erro = construir_api_error(status_code=status_code, caminho=_caminho(request))
+    detalhe = exc.detail if isinstance(exc.detail, str) else None
     logger.info(
-        "%s %s -> %d %s (correlationId=%s)",
+        "%s %s -> %d %s (correlationId=%s)%s",
         request.method,
         erro.caminho,
         status_code,
         erro.codigo,
         erro.correlationId,
+        f" detalhe={redact(detalhe)}" if detalhe else "",
     )
     return _resposta_erro(request, erro, status_code)
 
