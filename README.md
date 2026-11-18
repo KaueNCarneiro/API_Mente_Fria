@@ -147,11 +147,21 @@ a partir do contrato e tem o botão **Authorize** para o token.
 
 ## Testes
 
-Suíte completa (757 testes, ~4 minutos — cada teste usa um banco SQLite em memória novo):
+Suíte completa — cada teste usa um banco SQLite em memória novo, o que custa tempo e
+garante que nenhum teste dependa da ordem nem herde estado de outro:
 
 ```bash
 pytest
 ```
+
+Resultado esperado, entre 2 e 4 minutos conforme a máquina:
+
+```
+757 passed, 1 skipped, 18 warnings in 123.85s (0:02:03)
+```
+
+O `1 skipped` é proposital: `CsvFile` é `type: string` no contrato, não um objeto com
+exemplo para validar. Os avisos vêm de bibliotecas, não do código do projeto.
 
 Um domínio específico:
 
