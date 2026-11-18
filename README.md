@@ -35,6 +35,17 @@ Ative o ambiente virtual:
 pip install -r src/api/requirements.txt
 ```
 
+> **Se o PowerShell recusar o `Activate.ps1`** com "a execução de scripts foi desabilitada
+> neste sistema", não precisa mexer na política de execução da máquina: chame os
+> executáveis do ambiente pelo caminho, sem ativar nada.
+>
+> ```powershell
+> .venv\Scripts\pip.exe install -r src/api/requirements.txt
+> ```
+>
+> O mesmo vale adiante: `.venv\Scripts\uvicorn.exe`, `.venv\Scripts\python.exe` e
+> `.venv\Scripts\pytest.exe` no lugar de `uvicorn`, `python` e `pytest`.
+
 ### 2. Configuração
 
 Copie o modelo e gere um segredo para o JWT:
@@ -51,11 +62,16 @@ Cole o valor em `MENTE_FRIA_JWT_SECRET_KEY`, dentro do `.env`. O arquivo é lido
 quando `MENTE_FRIA_ENV=local`; em implantação os valores vêm do ambiente de execução.
 `.env` está no `.gitignore` — nunca versione segredos.
 
+Em desenvolvimento local o valor do modelo já serve para subir a API; gerar um próprio é
+boa prática. Em `production` a aplicação **recusa** iniciar com o placeholder.
+
 ### 3. Subir a API
 
 ```bash
 uvicorn --factory src.api.main:create_app
 ```
+
+Sem o ambiente ativado (ver o aviso acima): `.venv\Scripts\uvicorn.exe --factory src.api.main:create_app`
 
 - API: <http://127.0.0.1:8000/api/v1>
 - Documentação interativa (Swagger UI): <http://127.0.0.1:8000/docs>
@@ -69,11 +85,13 @@ povoá-lo pela própria API.
 
 ## Demonstração em um comando
 
-Com a API no ar e um banco **vazio**:
+Com a API no ar e um banco **vazio**, em outro terminal:
 
 ```bash
 python demonstracao.py
 ```
+
+Sem o ambiente ativado: `.venv\Scripts\python.exe demonstracao.py`
 
 O roteiro percorre 42 chamadas pelos endpoints do contrato e narra cada passo: bootstrap
 do administrador e conflito na segunda tentativa, autorização por perfil, catálogo,
